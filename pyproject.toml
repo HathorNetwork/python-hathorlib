@@ -1,0 +1,49 @@
+# Copyright 2020 Hathor Labs
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+[tool.poetry]
+name = "hathorlib"
+version = "0.0.0"
+description = "Hathor Network base objects library"
+authors = ["Hathor Team <contact@hathor.network>"]
+license = "Apache-2.0"
+readme = "README.md"
+homepage = "https://hathor.network/"
+repository = "https://github.com/HathorNetwork/hathor-core/"
+# https://pypi.org/classifiers/
+classifiers = [
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: Apache Software License",
+]
+exclude = ["tests", "tests.*"]
+
+[tool.poetry.dependencies]
+python = ">3.6,<4.0"
+base58 = "^2.1.0"
+aiohttp = "^3.7.4"
+structlog = "^21.1.0"
+pytest-cov = "^2.11.1"
+
+[tool.poetry.dev-dependencies]
+flake8 = "^3.8.4"
+isort = "^5.7.0"
+mypy = "^0.812"
+pytest = "^6.2.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
