@@ -1,11 +1,6 @@
-.DS_Store
-
 __pycache__/
 *.py[cod]
-
 /poetry.lock
-
-dist/
-
-.coverage
-htmlcov/
+/dist/
+/.coverage
+/htmlcov/

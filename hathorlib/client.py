@@ -5,8 +5,11 @@
 from typing import Any, Dict, List, NamedTuple, Optional, cast
 from urllib.parse import urljoin
 
-from aiohttp import ClientSession
-from structlog import get_logger
+try:
+    from aiohttp import ClientSession
+    from structlog import get_logger
+except ImportError as e:
+    raise ImportError('Missing dependency, please install extras: hathorlib[client]') from e
 
 from hathorlib import Block, TxOutput
 
