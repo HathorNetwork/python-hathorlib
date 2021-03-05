@@ -33,7 +33,7 @@ include = ["hathorlib/py.typed"]
 exclude = ["tests", "tests.*"]
 
 [tool.poetry.dependencies]
-python = ">3.6,<4.0"
+python = ">=3.6,<4.0"
 base58 = ">=2.1.0"
 structlog = {version = ">=20.0.0", optional = true}
 aiohttp = {version = ">=3.7.0", optional = true}
