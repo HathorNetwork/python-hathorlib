@@ -37,6 +37,7 @@ python = ">=3.6,<4.0"
 base58 = ">=2.1.0"
 structlog = {version = ">=20.0.0", optional = true}
 aiohttp = {version = ">=3.7.0", optional = true}
+cryptography = ">=3.3.1"
 
 [tool.poetry.dev-dependencies]
 flake9 = ">=3.8.0"
