@@ -10,6 +10,8 @@ import struct
 from typing import Any, Tuple
 
 import base58
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from hathorlib.conf import HathorSettings
 from hathorlib.exceptions import InvalidAddress
@@ -148,3 +150,33 @@ def clean_token_string(string: str) -> str:
         It sets to uppercase, removes double spaces and spaces at the beginning and end.
     """
     return re.sub(r'\s\s+', ' ', string).strip().upper()
+
+
+def get_public_key_from_bytes_compressed(public_key_bytes: bytes) -> ec.EllipticCurvePublicKey:
+    """Return the cryptography public key from the compressed bytes format."""
+    return ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256K1(), public_key_bytes)
+
+
+def get_address_b58_from_public_key(public_key: ec.EllipticCurvePublicKey) -> str:
+    """Get the b58 address from a public key."""
+    public_key_bytes = get_public_key_bytes_compressed(public_key)
+    return get_address_b58_from_public_key_bytes(public_key_bytes)
+
+
+def get_address_b58_from_public_key_bytes(public_key_bytes: bytes) -> str:
+    """Get the b58 address from a public key bytes."""
+    public_key_hash = get_hash160(public_key_bytes)
+    return get_address_b58_from_public_key_hash(public_key_hash)
+
+
+def get_public_key_bytes_compressed(public_key: ec.EllipticCurvePublicKey) -> bytes:
+    """Return the bytes of a pubkey in the compressed format."""
+    return public_key.public_bytes(Encoding.X962, PublicFormat.CompressedPoint)
+
+
+def get_hash160(public_key_bytes: bytes) -> bytes:
+    """Calculate hash160 of the input. First sha256 followed by a RIPEMD-160."""
+    key_hash = hashlib.sha256(public_key_bytes)
+    h = hashlib.new('ripemd160')
+    h.update(key_hash.digest())
+    return h.digest()
