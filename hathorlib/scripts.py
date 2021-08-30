@@ -7,6 +7,7 @@ LICENSE file in the root directory of this source tree.
 
 import re
 import struct
+from abc import ABC, abstractmethod
 from enum import IntEnum
 from typing import Any, Dict, List, Match, Optional, Pattern, Type, Union
 
@@ -139,7 +140,24 @@ class HathorScript:
             self.data += (bytes([Opcode.OP_PUSHDATA1]) + bytes([len(data)]) + data)
 
 
-class P2PKH:
+class BaseScript(ABC):
+    """
+    This class holds common methods for different script types to help abstracting the script type.
+    """
+
+    @abstractmethod
+    def to_human_readable(self) -> Dict[str, Any]:
+        """Return a nice dict for using on informational json APIs."""
+        raise NotImplementedError
+
+    @classmethod
+    @abstractmethod
+    def parse_script(cls, script: bytes) -> Optional['BaseScript']:
+        """Try to parse script into one of the subclasses. Return None if can't parse"""
+        raise NotImplementedError
+
+
+class P2PKH(BaseScript):
     re_match = re_compile('^(?:(DATA_4) OP_GREATERTHAN_TIMESTAMP)? '
                           'OP_DUP OP_HASH160 (DATA_20) OP_EQUALVERIFY OP_CHECKSIG$')
 
@@ -234,7 +252,7 @@ class P2PKH:
 
 
 # TODO: `IAddress` class for defining the common interface of `Union[MultiSig, P2PKH]`
-class MultiSig:
+class MultiSig(BaseScript):
     re_match = re_compile('^(?:(DATA_4) OP_GREATERTHAN_TIMESTAMP)? ' 'OP_HASH160 (DATA_20) OP_EQUAL$')
 
     def __init__(self, address: str, timelock: Optional[Any] = None) -> None:
@@ -332,6 +350,91 @@ class MultiSig:
         return None
 
 
+class DataScript(BaseScript):
+    def __init__(self, data: str) -> None:
+        """This class represents a data script usually used by NFT transactions.
+        The script has a data field and ends with an OP_CHECKSIG so it can't be spent.
+
+        :param data: data string to be stored in the script
+        :type data: string
+        """
+        self.data = data
+
+    def to_human_readable(self) -> Dict[str, Any]:
+        """ Decode DataScript class with type and data
+
+            :return: Dict with ScriptData info
+            :rtype: Dict[str:]
+        """
+        ret: Dict[str, Any] = {}
+        ret['type'] = 'Data'
+        ret['data'] = self.data
+        return ret
+
+    def get_script(self) -> bytes:
+        """ Gets script in bytes from class object
+
+            :rtype: bytes
+        """
+        return DataScript.create_output_script(self.data)
+
+    @classmethod
+    def create_output_script(cls, data: str) -> bytes:
+        """
+        :param data: Data to be stored in the script
+        :type data: string
+
+        :rtype: bytes
+        """
+        s = HathorScript()
+        s.pushData(data.encode('utf-8'))
+        s.addOpcode(Opcode.OP_CHECKSIG)
+        return s.data
+
+    @classmethod
+    def parse_script(cls, script: bytes) -> Optional['DataScript']:
+        """Checks if the given script is of type data script. If it is, returns the DataScript object.
+        Otherwise, returns None.
+
+        :param script: script to check
+        :type script: bytes
+
+        :rtype: :py:class:`hathor.transaction.scripts.DataScript` or None
+        """
+        if len(script) < 2:
+            # At least 1 byte for len data and 1 byte for OP_CHECKSIG
+            return None
+
+        # The expected len will be at least 2 bytes
+        # 1 for the script len and 1 for the OP_CHECKSIG in the end
+        expected_script_len = 2
+
+        if script[0] == Opcode.OP_PUSHDATA1:
+            expected_script_len += 1
+            data_bytes_len = script[1]
+        else:
+            data_bytes_len = script[0]
+
+        expected_script_len += data_bytes_len
+
+        if expected_script_len != len(script):
+            # Script is not a DataScript
+            return None
+
+        if script[-1] != Opcode.OP_CHECKSIG:
+            # Last script byte must be an OP_CHECKSIG
+            return None
+
+        # Get the data from the script
+        data = get_pushdata(script)
+
+        try:
+            decoded_str = data.decode('utf-8')
+            return cls(decoded_str)
+        except UnicodeDecodeError:
+            return None
+
+
 def create_output_script(address: bytes, timelock: Optional[Any] = None) -> bytes:
     """ Verifies if address is P2PKH or Multisig and create correct output script
 
@@ -353,20 +456,21 @@ def create_output_script(address: bytes, timelock: Optional[Any] = None) -> byte
         raise ScriptError('The address is not valid')
 
 
-def parse_address_script(script: bytes) -> Optional[Union[P2PKH, MultiSig]]:
-    """ Verifies if address is P2PKH or Multisig and calls correct parse_script method
+def parse_address_script(script: bytes) -> Optional[BaseScript]:
+    """ Verifies if script is P2PKH, Multisig or DataScript and calls correct parse_script method
 
         :param script: script to decode
         :type script: bytes
 
-        :return: P2PKH or MultiSig class or None
+        :return: P2PKH, MultiSig or DataScript class or None
         :rtype: class or None
     """
-    script_classes: List[Type[Union[P2PKH, MultiSig]]] = [P2PKH, MultiSig]
+    script_classes: List[Type[Union[P2PKH, MultiSig, DataScript]]] = [P2PKH, MultiSig, DataScript]
     # Each class verifies its script
     for script_class in script_classes:
-        if script_class.re_match.search(script):
-            return script_class.parse_script(script)
+        script_obj = script_class.parse_script(script)
+        if script_obj is not None:
+            return script_obj
     return None
 
 

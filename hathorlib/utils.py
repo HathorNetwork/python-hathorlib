@@ -7,7 +7,7 @@ LICENSE file in the root directory of this source tree.
 import hashlib
 import re
 import struct
-from typing import Any, Tuple
+from typing import TYPE_CHECKING, Any, Tuple
 
 import base58
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -15,6 +15,9 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from hathorlib.conf import HathorSettings
 from hathorlib.exceptions import InvalidAddress
+
+if TYPE_CHECKING:
+    from hathorlib import BaseTransaction
 
 settings = HathorSettings()
 
@@ -180,3 +183,15 @@ def get_hash160(public_key_bytes: bytes) -> bytes:
     h = hashlib.new('ripemd160')
     h.update(key_hash.digest())
     return h.digest()
+
+
+def is_nft_creation(tx: 'BaseTransaction') -> bool:
+    """Returns True if the transaction is an NFT creation"""
+    from hathorlib import TokenCreationTransaction
+    from hathorlib.base_transaction import TxVersion
+    if tx.version != TxVersion.TOKEN_CREATION_TRANSACTION:
+        return False
+
+    # Assert needed because of mypy strict
+    assert type(tx) == TokenCreationTransaction
+    return tx.is_nft_creation()
