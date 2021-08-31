@@ -355,6 +355,8 @@ class DataScript(BaseScript):
         """This class represents a data script usually used by NFT transactions.
         The script has a data field and ends with an OP_CHECKSIG so it can't be spent.
 
+        The script format is: <DATA_N> <OP_CHECKSIG>
+
         :param data: data string to be stored in the script
         :type data: string
         """
