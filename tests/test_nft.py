@@ -7,7 +7,7 @@ LICENSE file in the root directory of this source tree.
 
 import unittest
 
-from hathorlib import TokenCreationTransaction, Transaction, TxOutput
+from hathorlib.base_transaction import TxOutput, tx_or_block_from_bytes
 from hathorlib.scripts import DataScript
 from hathorlib.utils import is_nft_creation
 
@@ -21,7 +21,7 @@ class HathorNFTTestCase(unittest.TestCase):
                              '97d97b28124ebbd0208d60d9f08780000000200001976a914e7c8133e7611a0ef57830f4321661ff9e5c42f'
                              '4188ac40200000218def41612cefe10200002d0403a9e39e8176b2e8ca6728f7c8393cea3403f4432c047e5'
                              'b28cb0470009ed2ab70b799729bcdbaa8edc064bd78fb258ea23fe6688272acad587445ab0000000c')
-        tx = Transaction.create_from_struct(data)
+        tx = tx_or_block_from_bytes(data)
         self.assertFalse(is_nft_creation(tx))
 
         # Create token tx
@@ -34,7 +34,7 @@ class HathorNFTTestCase(unittest.TestCase):
                               'a106a18ea5c1ce158d8488ac0106544f4b454e3104544b4e314032320a39bd7d606127f3ff02009ed2ab70b'
                               '799729bcdbaa8edc064bd78fb258ea23fe6688272acad587445ab00d9741624399388d196e5e409595e65a1'
                               '803764ee078f34ebb2bda63ff6a63a000104d8')
-        tx2 = TokenCreationTransaction.create_from_struct(data2)
+        tx2 = tx_or_block_from_bytes(data2)
         self.assertFalse(is_nft_creation(tx2))
 
         # NFT tx
@@ -46,11 +46,11 @@ class HathorNFTTestCase(unittest.TestCase):
                               '14e6b88ac01065465737474740354535440200000218def416127d5800200d9741624399388d196e5e40959'
                               '5e65a1803764ee078f34ebb2bda63ff6a63a001a2603c9a5947233dedb1160e9468e95563e76945ae58d829'
                               '118e17e668dc900000053')
-        tx3 = TokenCreationTransaction.create_from_struct(data3)
+        tx3 = tx_or_block_from_bytes(data3)
         self.assertTrue(is_nft_creation(tx3))
 
         # NFT custom tx with 2 data script outputs
-        tx4 = TokenCreationTransaction.create_from_struct(data3)
+        tx4 = tx_or_block_from_bytes(data3)
         # Add new data script output, creating a token creation tx with 2 script data outputs
         # This should be rejected as a standard NFT
         new_output = TxOutput(1, tx4.outputs[0].script, 0)
@@ -79,6 +79,6 @@ class HathorNFTTestCase(unittest.TestCase):
                              '14e6b88ac01065465737474740354535440200000218def416127d5800200d9741624399388d196e5e40959'
                              '5e65a1803764ee078f34ebb2bda63ff6a63a001a2603c9a5947233dedb1160e9468e95563e76945ae58d829'
                              '118e17e668dc900000053')
-        tx = TokenCreationTransaction.create_from_struct(data)
+        tx = tx_or_block_from_bytes(data)
         nft_script = DataScript.parse_script(tx.outputs[0].script)
         self.assertEqual(nft_script.data, 'TEST')
