@@ -156,6 +156,16 @@ class BaseScript(ABC):
         """Try to parse script into one of the subclasses. Return None if can't parse"""
         raise NotImplementedError
 
+    @abstractmethod
+    def get_type(self) -> str:
+        """Return readable script type"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_script(self) -> bytes:
+        """Return script in bytes"""
+        raise NotImplementedError
+
 
 class P2PKH(BaseScript):
     re_match = re_compile('^(?:(DATA_4) OP_GREATERTHAN_TIMESTAMP)? '
@@ -184,10 +194,13 @@ class P2PKH(BaseScript):
 
     def to_human_readable(self) -> Dict[str, Any]:
         ret: Dict[str, Any] = {}
-        ret['type'] = 'P2PKH'
+        ret['type'] = self.get_type()
         ret['address'] = self.address
         ret['timelock'] = self.timelock
         return ret
+
+    def get_type(self) -> str:
+        return 'P2PKH'
 
     @classmethod
     def create_output_script(cls, address: bytes, timelock: Optional[Any] = None) -> bytes:
@@ -212,6 +225,9 @@ class P2PKH(BaseScript):
         s.addOpcode(Opcode.OP_EQUALVERIFY)
         s.addOpcode(Opcode.OP_CHECKSIG)
         return s.data
+
+    def get_script(self) -> bytes:
+        return P2PKH.create_output_script(decode_address(self.address), self.timelock)
 
     @classmethod
     def create_input_data(cls, public_key_bytes: bytes, signature: bytes) -> bytes:
@@ -282,10 +298,13 @@ class MultiSig(BaseScript):
             :rtype: Dict[str:]
         """
         ret: Dict[str, Any] = {}
-        ret['type'] = 'MultiSig'
+        ret['type'] = self.get_type()
         ret['address'] = self.address
         ret['timelock'] = self.timelock
         return ret
+
+    def get_type(self) -> str:
+        return 'MultiSig'
 
     @classmethod
     def create_output_script(cls, address: bytes, timelock: Optional[Any] = None) -> bytes:
@@ -308,6 +327,9 @@ class MultiSig(BaseScript):
         s.pushData(redeem_script_hash)
         s.addOpcode(Opcode.OP_EQUAL)
         return s.data
+
+    def get_script(self) -> bytes:
+        return MultiSig.create_output_script(decode_address(self.address), self.timelock)
 
     @classmethod
     def create_input_data(cls, redeem_script: bytes, signatures: List[bytes]) -> bytes:
@@ -369,15 +391,14 @@ class DataScript(BaseScript):
             :rtype: Dict[str:]
         """
         ret: Dict[str, Any] = {}
-        ret['type'] = 'Data'
+        ret['type'] = self.get_type()
         ret['data'] = self.data
         return ret
 
-    def get_script(self) -> bytes:
-        """ Gets script in bytes from class object
+    def get_type(self) -> str:
+        return 'Data'
 
-            :rtype: bytes
-        """
+    def get_script(self) -> bytes:
         return DataScript.create_output_script(self.data)
 
     @classmethod
@@ -467,7 +488,7 @@ def parse_address_script(script: bytes) -> Optional[BaseScript]:
         :return: P2PKH, MultiSig or DataScript class or None
         :rtype: class or None
     """
-    script_classes: List[Type[Union[P2PKH, MultiSig, DataScript]]] = [P2PKH, MultiSig, DataScript]
+    script_classes: List[Type[Union[BaseScript]]] = [P2PKH, MultiSig, DataScript]
     # Each class verifies its script
     for script_class in script_classes:
         script_obj = script_class.parse_script(script)
