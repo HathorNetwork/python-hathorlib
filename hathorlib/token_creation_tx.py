@@ -196,7 +196,7 @@ class TokenCreationTransaction(Transaction):
 
         for output in self.outputs[1:]:
             parsed_output = P2PKH.parse_script(output.script)
-            if parsed_output is None or ((output.token_data & TxOutput.TOKEN_INDEX_MASK) not in [0, 1]):
+            if parsed_output is None or (output.get_token_index() not in [0, 1]):
                 # We allow only the first output to be a DataScript
                 # all other outputs must be a P2PKH of HTR or the created token
                 return False
