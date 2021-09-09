@@ -20,7 +20,7 @@ from typing import Tuple
 from hathorlib.base_transaction import TxInput, TxOutput
 from hathorlib.conf import HathorSettings
 from hathorlib.exceptions import TransactionDataError
-from hathorlib.scripts import P2PKH, DataScript
+from hathorlib.scripts import P2PKH, DataScript, MultiSig, parse_address_script
 from hathorlib.transaction import Transaction
 from hathorlib.utils import clean_token_string, int_to_bytes, unpack, unpack_len
 
@@ -195,10 +195,17 @@ class TokenCreationTransaction(Transaction):
             return False
 
         for output in self.outputs[1:]:
-            parsed_output = P2PKH.parse_script(output.script)
-            if parsed_output is None or (output.get_token_index() not in [0, 1]):
-                # We allow only the first output to be a DataScript
-                # all other outputs must be a P2PKH of HTR or the created token
+            parsed_output = parse_address_script(output.script)
+
+            # We allow only the first output to be a DataScript
+            # all other outputs must be a P2PKH or MultiSig
+            allowed_types = (P2PKH, MultiSig)
+            if parsed_output is None or not isinstance(parsed_output, allowed_types):
+                # Invalid output type for an NFT creation tx
+                return False
+
+            if output.get_token_index() not in [0, 1]:
+                # All output (except the first) must be of HTR or the created token
                 return False
 
         return True
