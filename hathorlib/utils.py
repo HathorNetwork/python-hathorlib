@@ -188,10 +188,7 @@ def get_hash160(public_key_bytes: bytes) -> bytes:
 def is_nft_creation(tx: 'BaseTransaction') -> bool:
     """Returns True if the transaction is an NFT creation"""
     from hathorlib import TokenCreationTransaction
-    from hathorlib.base_transaction import TxVersion
-    if tx.version != TxVersion.TOKEN_CREATION_TRANSACTION:
+    if isinstance(tx, TokenCreationTransaction):
+        return tx.is_nft_creation()
+    else:
         return False
-
-    # Assert needed because of mypy strict
-    assert type(tx) == TokenCreationTransaction
-    return tx.is_nft_creation()
