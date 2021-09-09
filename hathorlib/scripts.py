@@ -13,7 +13,11 @@ from typing import Any, Dict, List, Match, Optional, Pattern, Type, Union
 
 from hathorlib.conf import HathorSettings
 from hathorlib.exceptions import ScriptError
-from hathorlib.utils import get_address_b58_from_public_key_hash, get_address_b58_from_redeem_script_hash
+from hathorlib.utils import (
+    decode_address,
+    get_address_b58_from_public_key_hash,
+    get_address_b58_from_redeem_script_hash
+)
 
 settings = HathorSettings()
 
