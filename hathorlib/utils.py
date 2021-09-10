@@ -183,12 +183,3 @@ def get_hash160(public_key_bytes: bytes) -> bytes:
     h = hashlib.new('ripemd160')
     h.update(key_hash.digest())
     return h.digest()
-
-
-def is_nft_creation(tx: 'BaseTransaction') -> bool:
-    """Returns True if the transaction is an NFT creation"""
-    from hathorlib import TokenCreationTransaction
-    if isinstance(tx, TokenCreationTransaction):
-        return tx.is_nft_creation()
-    else:
-        return False

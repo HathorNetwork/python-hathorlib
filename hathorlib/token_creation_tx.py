@@ -175,6 +175,7 @@ class TokenCreationTransaction(Transaction):
         if clean_token_string(self.token_symbol) == clean_token_string(settings.HATHOR_TOKEN_SYMBOL):
             raise TransactionDataError('Invalid token symbol ({})'.format(self.token_symbol))
 
+    @property
     def is_nft_creation(self) -> bool:
         """Returns True if it's an NFT creation transaction"""
         # We will check the outputs to validate that we have an NFT standard creation

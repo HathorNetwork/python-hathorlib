@@ -388,6 +388,11 @@ class BaseTransaction(ABC):
         """
         self.hash = self.calculate_hash()
 
+    @property
+    def is_nft_creation(self) -> bool:
+        """Returns True if it's an NFT creation transaction"""
+        return False
+
 
 class TxInput:
     _tx: BaseTransaction  # XXX: used for caching on hathor.transaction.Transaction.get_spent_tx
