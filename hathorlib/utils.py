@@ -7,7 +7,7 @@ LICENSE file in the root directory of this source tree.
 import hashlib
 import re
 import struct
-from typing import TYPE_CHECKING, Any, Tuple
+from typing import Any, Tuple
 
 import base58
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -15,9 +15,6 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from hathorlib.conf import HathorSettings
 from hathorlib.exceptions import InvalidAddress
-
-if TYPE_CHECKING:
-    from hathorlib import BaseTransaction
 
 settings = HathorSettings()
 
