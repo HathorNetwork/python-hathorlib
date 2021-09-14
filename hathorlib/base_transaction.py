@@ -388,6 +388,11 @@ class BaseTransaction(ABC):
         """
         self.hash = self.calculate_hash()
 
+    @property
+    def is_nft_creation(self) -> bool:
+        """Returns True if it's an NFT creation transaction"""
+        return False
+
 
 class TxInput:
     _tx: BaseTransaction  # XXX: used for caching on hathor.transaction.Transaction.get_spent_tx
@@ -589,3 +594,16 @@ def output_value_to_bytes(number: int) -> bytes:
         return (-number).to_bytes(8, byteorder='big', signed=True)
     else:
         return number.to_bytes(4, byteorder='big', signed=True)  # `signed` makes no difference, but oh well
+
+
+def tx_or_block_from_bytes(data: bytes) -> BaseTransaction:
+    """ Creates the correct tx subclass from a sequence of bytes
+    """
+    # version field takes up the first 2 bytes
+    version = int.from_bytes(data[0:2], 'big')
+    try:
+        tx_version = TxVersion(version)
+        cls = tx_version.get_cls()
+        return cls.create_from_struct(data)
+    except ValueError:
+        raise StructError('Invalid bytes to create transaction subclass.')
