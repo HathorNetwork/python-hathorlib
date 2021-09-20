@@ -396,8 +396,8 @@ class BaseTransaction(ABC):
         """Returns True if it's an NFT creation transaction"""
         return False
 
-    def is_standard(self,
-                    max_output_script_size=settings.MAX_OUTPUT_SCRIPT_SIZE, allow_non_standard_script=False) -> bool:
+    def is_standard(self, max_output_script_size: int = settings.MAX_OUTPUT_SCRIPT_SIZE,
+                    allow_non_standard_script: bool = False) -> bool:
         """Return True is the transaction is standard
         """
         is_nft_creation = self.is_nft_creation
