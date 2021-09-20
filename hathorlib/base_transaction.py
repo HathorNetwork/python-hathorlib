@@ -400,7 +400,7 @@ class BaseTransaction(ABC):
                     max_output_script_size=settings.MAX_OUTPUT_SCRIPT_SIZE, allow_non_standard_script=False) -> bool:
         """Return True is the transaction is standard
         """
-        is_nft_creation = tx.is_nft_creation
+        is_nft_creation = self.is_nft_creation
         # First we check if any output script exceeds the maximum script size allowed
         # Then we must check if all outputs are standard, and we allow a non
         # standard output only in nft creation transactions

@@ -8,8 +8,12 @@ LICENSE file in the root directory of this source tree.
 import unittest
 
 from hathorlib import Block, TokenCreationTransaction, Transaction
+from hathorlib.base_transaction import tx_or_block_from_bytes
+from hathorlib.conf import HathorSettings
 from hathorlib.scripts import create_output_script
 from hathorlib.utils import decode_address
+
+settings = HathorSettings()
 
 
 class HathorCommonsTestCase(unittest.TestCase):
@@ -105,3 +109,34 @@ class HathorCommonsTestCase(unittest.TestCase):
 
     def test_script_basics(self):
         create_output_script(decode_address('HVZjvL1FJ23kH3buGNuttVRsRKq66WHUVZ'))
+
+    def test_standard_tx(self):
+        data = bytes.fromhex('0001000102000001e0e88216036e4e52872ba60a96df7570c3e29cc30eda6dd92ea0fd'
+                             '304c00006a4730450221009fa4798bb69f66035013063c13f1a970ec58111bcead277d'
+                             '9c93e45c2b6885fe022012e039b26cc4a4cb0a8a5abb7deb7bb78610ed362bf422efa2'
+                             '47db37c5a841e12102bc1213ea99ab55effcff760f94c09f8b1a0b7b990c01128d06b4'
+                             'a8c5c5f41f8400089f0800001976a91438fb3bc92b76819e9c19ef7c079d327c8fcd19'
+                             '9288ac02de2d3800001976a9148d880c42ddcf78a2da5d06558f13515508720b4088ac'
+                             '403518509c63f9195ecfd7d40200001ea9d6e1d31da6893fcec594dc3fa8b6819ae126'
+                             '8c190f7a1441302226e2000007d1c5add7b9085037cfc591f1008dff4fe8a9158fd1a4'
+                             '840a6dd5d4e4e600d2da8d')
+
+        tx = tx_or_block_from_bytes(data)
+        self.assertTrue(tx.is_standard())
+
+        # Change the first output to have script size bigger than allowed
+        tx.outputs[0].script = b'x' * (settings.MAX_OUTPUT_SCRIPT_SIZE + 1)
+        tx_bytes_big = bytes(tx)
+        tx2 = tx_or_block_from_bytes(tx_bytes_big)
+        self.assertFalse(tx2.is_standard())
+        self.assertFalse(tx2.is_standard(max_output_script_size=settings.MAX_OUTPUT_SCRIPT_SIZE + 1))
+        self.assertTrue(
+            tx2.is_standard(max_output_script_size=settings.MAX_OUTPUT_SCRIPT_SIZE + 1, allow_non_standard_script=True)
+        )
+
+        # Make first output non standard
+        tx.outputs[0].script = b'x' * settings.MAX_OUTPUT_SCRIPT_SIZE
+        tx_bytes_non_standard = bytes(tx)
+        tx3 = tx_or_block_from_bytes(tx_bytes_non_standard)
+        self.assertFalse(tx3.is_standard())
+        self.assertTrue(tx3.is_standard(allow_non_standard_script=True))
