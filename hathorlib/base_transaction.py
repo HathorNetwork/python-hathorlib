@@ -15,8 +15,11 @@ from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type
 
 from _hashlib import HASH  # type: ignore
 
+from hathorlib.conf import HathorSettings
 from hathorlib.exceptions import InvalidOutputValue, WeightError
 from hathorlib.utils import int_to_bytes, unpack, unpack_len
+
+settings = HathorSettings()
 
 MAX_NONCE = 2**32
 
@@ -393,6 +396,24 @@ class BaseTransaction(ABC):
         """Returns True if it's an NFT creation transaction"""
         return False
 
+    def is_standard(self,
+                    max_output_script_size=settings.MAX_OUTPUT_SCRIPT_SIZE, allow_non_standard_script=False) -> bool:
+        """Return True is the transaction is standard
+        """
+        is_nft_creation = tx.is_nft_creation
+        # First we check if any output script exceeds the maximum script size allowed
+        # Then we must check if all outputs are standard, and we allow a non
+        # standard output only in nft creation transactions
+        for output in self.outputs:
+            if len(output.script) > max_output_script_size:
+                return False
+
+            if not allow_non_standard_script and not is_nft_creation:
+                if not output.is_standard_script():
+                    return False
+
+        return True
+
 
 class TxInput:
     _tx: BaseTransaction  # XXX: used for caching on hathor.transaction.Transaction.get_spent_tx
@@ -565,6 +586,13 @@ class TxOutput:
         if decode_script:
             data['decoded'] = self.to_human_readable()
         return data
+
+    def is_standard_script(self) -> bool:
+        """Return True if this output has a standard script."""
+        from hathorlib.scripts import P2PKH, MultiSig, parse_address_script
+        parsed_output = parse_address_script(self.script)
+        standard_types = (P2PKH, MultiSig)
+        return parsed_output is not None and isinstance(parsed_output, standard_types)
 
 
 def bytes_to_output_value(buf: bytes) -> Tuple[int, bytes]:

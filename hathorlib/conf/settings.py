@@ -44,3 +44,6 @@ class HathorSettings(NamedTuple):
 
     # Amount in which tx min weight reaches the middle point between the minimum and maximum weight
     MIN_TX_WEIGHT_K: int = 100
+
+    # Maximum size of the tx output's script allowed for a tx to be standard
+    MAX_OUTPUT_SCRIPT_SIZE: int = 256
