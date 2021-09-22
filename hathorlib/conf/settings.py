@@ -46,4 +46,4 @@ class HathorSettings(NamedTuple):
     MIN_TX_WEIGHT_K: int = 100
 
     # Maximum size of the tx output's script allowed for a tx to be standard
-    MAX_OUTPUT_SCRIPT_SIZE: int = 256
+    PUSHTX_MAX_OUTPUT_SCRIPT_SIZE: int = 256

@@ -125,18 +125,18 @@ class HathorCommonsTestCase(unittest.TestCase):
         self.assertTrue(tx.is_standard())
 
         # Change the first output to have script size bigger than allowed
-        tx.outputs[0].script = b'x' * (settings.MAX_OUTPUT_SCRIPT_SIZE + 1)
+        tx.outputs[0].script = b'x' * (settings.PUSHTX_MAX_OUTPUT_SCRIPT_SIZE + 1)
         tx_bytes_big = bytes(tx)
         tx2 = tx_or_block_from_bytes(tx_bytes_big)
         self.assertFalse(tx2.is_standard())
-        self.assertFalse(tx2.is_standard(max_output_script_size=settings.MAX_OUTPUT_SCRIPT_SIZE + 1))
+        self.assertFalse(tx2.is_standard(std_max_output_script_size=settings.PUSHTX_MAX_OUTPUT_SCRIPT_SIZE + 1))
         self.assertTrue(
-            tx2.is_standard(max_output_script_size=settings.MAX_OUTPUT_SCRIPT_SIZE + 1, allow_non_standard_script=True)
+            tx2.is_standard(std_max_output_script_size=settings.PUSHTX_MAX_OUTPUT_SCRIPT_SIZE + 1, only_standard_script_type=False)
         )
 
         # Make first output non standard
-        tx.outputs[0].script = b'x' * settings.MAX_OUTPUT_SCRIPT_SIZE
+        tx.outputs[0].script = b'x' * settings.PUSHTX_MAX_OUTPUT_SCRIPT_SIZE
         tx_bytes_non_standard = bytes(tx)
         tx3 = tx_or_block_from_bytes(tx_bytes_non_standard)
         self.assertFalse(tx3.is_standard())
-        self.assertTrue(tx3.is_standard(allow_non_standard_script=True))
+        self.assertTrue(tx3.is_standard(only_standard_script_type=False))

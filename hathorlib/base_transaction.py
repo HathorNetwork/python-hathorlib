@@ -17,6 +17,7 @@ from _hashlib import HASH  # type: ignore
 
 from hathorlib.conf import HathorSettings
 from hathorlib.exceptions import InvalidOutputValue, WeightError
+from hathorlib.scripts import P2PKH, MultiSig, parse_address_script
 from hathorlib.utils import int_to_bytes, unpack, unpack_len
 
 settings = HathorSettings()
@@ -391,26 +392,20 @@ class BaseTransaction(ABC):
         """
         self.hash = self.calculate_hash()
 
-    @property
-    def is_nft_creation(self) -> bool:
+    def is_nft_creation_standard(self) -> bool:
         """Returns True if it's an NFT creation transaction"""
         return False
 
-    def is_standard(self, max_output_script_size: int = settings.MAX_OUTPUT_SCRIPT_SIZE,
-                    allow_non_standard_script: bool = False) -> bool:
-        """Return True is the transaction is standard
+    def is_standard(self, std_max_output_script_size: int = settings.PUSHTX_MAX_OUTPUT_SCRIPT_SIZE,
+                    only_standard_script_type: bool = True) -> bool:
+        """ Return True is the transaction is standard
         """
-        is_nft_creation = self.is_nft_creation
-        # First we check if any output script exceeds the maximum script size allowed
-        # Then we must check if all outputs are standard, and we allow a non
-        # standard output only in nft creation transactions
-        for output in self.outputs:
-            if len(output.script) > max_output_script_size:
-                return False
+        if self.is_nft_creation_standard():
+            return True
 
-            if not allow_non_standard_script and not is_nft_creation:
-                if not output.is_standard_script():
-                    return False
+        for output in self.outputs:
+            if not output.is_standard_script(std_max_output_script_size, only_standard_script_type):
+                return False
 
         return True
 
@@ -502,6 +497,9 @@ class TxOutput:
 
     ALL_AUTHORITIES = TOKEN_MINT_MASK | TOKEN_MELT_MASK
 
+    # standard types for output script
+    STANDARD_SCRIPT_TYPES = (P2PKH, MultiSig)
+
     def __init__(self, value: int, script: bytes, token_data: int = 0) -> None:
         """
             value: amount spent (4 bytes)
@@ -587,12 +585,22 @@ class TxOutput:
             data['decoded'] = self.to_human_readable()
         return data
 
-    def is_standard_script(self) -> bool:
+    def is_standard_script(self, std_max_output_script_size: int = settings.PUSHTX_MAX_OUTPUT_SCRIPT_SIZE,
+                           only_standard_script_type: bool = True) -> bool:
         """Return True if this output has a standard script."""
-        from hathorlib.scripts import P2PKH, MultiSig, parse_address_script
+        # First check: script size limit
+        if len(self.script) > std_max_output_script_size:
+            return False
+
+        # Second check: output script type
+        # if we allow different script types, then it's ok
+        # otherwise we check if it's one of the standard types
         parsed_output = parse_address_script(self.script)
-        standard_types = (P2PKH, MultiSig)
-        return parsed_output is not None and isinstance(parsed_output, standard_types)
+        if only_standard_script_type:
+            if parsed_output is None or not isinstance(parsed_output, self.STANDARD_SCRIPT_TYPES):
+                return False
+
+        return True
 
 
 def bytes_to_output_value(buf: bytes) -> Tuple[int, bytes]:
