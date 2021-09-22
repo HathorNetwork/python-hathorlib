@@ -131,7 +131,9 @@ class HathorCommonsTestCase(unittest.TestCase):
         self.assertFalse(tx2.is_standard())
         self.assertFalse(tx2.is_standard(std_max_output_script_size=settings.PUSHTX_MAX_OUTPUT_SCRIPT_SIZE + 1))
         self.assertTrue(
-            tx2.is_standard(std_max_output_script_size=settings.PUSHTX_MAX_OUTPUT_SCRIPT_SIZE + 1, only_standard_script_type=False)
+            tx2.is_standard(
+                std_max_output_script_size=settings.PUSHTX_MAX_OUTPUT_SCRIPT_SIZE + 1, only_standard_script_type=False
+            )
         )
 
         # Make first output non standard
