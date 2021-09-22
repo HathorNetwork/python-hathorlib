@@ -21,7 +21,8 @@ class HathorNFTTestCase(unittest.TestCase):
                              '4188ac40200000218def41612cefe10200002d0403a9e39e8176b2e8ca6728f7c8393cea3403f4432c047e5'
                              'b28cb0470009ed2ab70b799729bcdbaa8edc064bd78fb258ea23fe6688272acad587445ab0000000c')
         tx = tx_or_block_from_bytes(data)
-        self.assertFalse(tx.is_nft_creation)
+        self.assertFalse(tx.is_nft_creation_standard())
+        self.assertTrue(tx.is_standard())
 
         # Create token tx
         data2 = bytes.fromhex('0002010400b25b5385d9bbe80018a98884fdb2d63de3404c23e1b6695df34c103755b56900006a473045022'
@@ -34,7 +35,8 @@ class HathorNFTTestCase(unittest.TestCase):
                               '799729bcdbaa8edc064bd78fb258ea23fe6688272acad587445ab00d9741624399388d196e5e409595e65a1'
                               '803764ee078f34ebb2bda63ff6a63a000104d8')
         tx2 = tx_or_block_from_bytes(data2)
-        self.assertFalse(tx2.is_nft_creation)
+        self.assertFalse(tx2.is_nft_creation_standard())
+        self.assertTrue(tx2.is_standard())
 
         # NFT tx
         data3 = bytes.fromhex('00020103000023117762f80fad7c28eea89e793036e8e5855038eee4deea02c53d7513e700006a473045022'
@@ -46,7 +48,8 @@ class HathorNFTTestCase(unittest.TestCase):
                               '5e65a1803764ee078f34ebb2bda63ff6a63a001a2603c9a5947233dedb1160e9468e95563e76945ae58d829'
                               '118e17e668dc900000053')
         tx3 = tx_or_block_from_bytes(data3)
-        self.assertTrue(tx3.is_nft_creation)
+        self.assertTrue(tx3.is_nft_creation_standard())
+        self.assertTrue(tx3.is_standard())
 
         # NFT custom tx with 2 data script outputs
         tx4 = tx_or_block_from_bytes(data3)
@@ -54,7 +57,8 @@ class HathorNFTTestCase(unittest.TestCase):
         # This should be rejected as a standard NFT
         new_output = TxOutput(1, tx4.outputs[0].script, 0)
         tx4.outputs = [tx4.outputs[0], new_output] + tx4.outputs[1:]
-        self.assertFalse(tx4.is_nft_creation)
+        self.assertFalse(tx4.is_nft_creation_standard())
+        self.assertFalse(tx4.is_standard())
 
     def test_script_data(self):
         # Create NFT script data test
@@ -81,3 +85,6 @@ class HathorNFTTestCase(unittest.TestCase):
         tx = tx_or_block_from_bytes(data)
         nft_script = DataScript.parse_script(tx.outputs[0].script)
         self.assertEqual(nft_script.data, 'TEST')
+
+        self.assertFalse(tx.outputs[0].is_standard_script())
+        self.assertTrue(tx.outputs[1].is_standard_script())

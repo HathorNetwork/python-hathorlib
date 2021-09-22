@@ -20,7 +20,7 @@ from typing import Tuple
 from hathorlib.base_transaction import TxInput, TxOutput
 from hathorlib.conf import HathorSettings
 from hathorlib.exceptions import TransactionDataError
-from hathorlib.scripts import P2PKH, DataScript, MultiSig, parse_address_script
+from hathorlib.scripts import DataScript
 from hathorlib.transaction import Transaction
 from hathorlib.utils import clean_token_string, int_to_bytes, unpack, unpack_len
 
@@ -175,9 +175,8 @@ class TokenCreationTransaction(Transaction):
         if clean_token_string(self.token_symbol) == clean_token_string(settings.HATHOR_TOKEN_SYMBOL):
             raise TransactionDataError('Invalid token symbol ({})'.format(self.token_symbol))
 
-    @property
-    def is_nft_creation(self) -> bool:
-        """Returns True if it's an NFT creation transaction"""
+    def is_nft_creation_standard(self) -> bool:
+        """Returns True if it's a standard NFT creation transaction"""
         # We will check the outputs to validate that we have an NFT standard creation
         # https://github.com/HathorNetwork/rfcs/blob/master/text/0032-nft-standard.md#transaction-standard
         if len(self.outputs) < 2:
@@ -195,14 +194,13 @@ class TokenCreationTransaction(Transaction):
             # NFT creation DataScript output must have value 1 and must be of HTR
             return False
 
-        for output in self.outputs[1:]:
-            parsed_output = parse_address_script(output.script)
+        if not first_output.is_standard_script(only_standard_script_type=False):
+            # Here we check that the script size is standard
+            return False
 
-            # We allow only the first output to be a DataScript
-            # all other outputs must be a P2PKH or MultiSig
-            allowed_types = (P2PKH, MultiSig)
-            if parsed_output is None or not isinstance(parsed_output, allowed_types):
-                # Invalid output type for an NFT creation tx
+        for output in self.outputs[1:]:
+            if not output.is_standard_script():
+                # Invalid output script for an NFT creation tx
                 return False
 
             if output.get_token_index() not in [0, 1]:
