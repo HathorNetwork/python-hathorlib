@@ -129,13 +129,15 @@ class HathorClient:
         data = {
             'hexdata': raw.hex(),
         }
-        async with self._session.post(self._get_url('submit_block'), json=data) as resp:
-            status = resp.status
-            if status > 299:
-                response = await resp.text()
-                self.log.error('Error pushing tx or block', response=response, status=status)
-                raise RuntimeError('Cannot push tx or block')
 
-            response = await resp.json()
+        resp = await self._session.post(self._get_url('submit_block'), json=data)
 
-            return cast(bool, response['result'])
+        status = resp.status
+        if status > 299:
+            response = await resp.text()
+            self.log.error('Error pushing tx or block', response=response, status=status)
+            raise RuntimeError('Cannot push tx or block')
+
+        json = await resp.json()
+
+        return cast(bool, json['result'])

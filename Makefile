@@ -44,7 +44,7 @@ check: flake8 isort-check mypy
 
 .PHONY: isort
 isort: $(py_sources) $(py_tests)
-	isort -ac -rc $^
+	isort -ac $^
 
 # cleaning:
 
