@@ -23,7 +23,7 @@ If are managing virtualenvs without poetry, make sure it's activated and run:
 
 To run linters:
 
-    poetry run make tests
+    poetry run make check
 
 Or without poetry venv:
 
