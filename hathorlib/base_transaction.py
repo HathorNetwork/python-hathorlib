@@ -17,7 +17,7 @@ from _hashlib import HASH  # type: ignore
 
 from hathorlib.conf import HathorSettings
 from hathorlib.exceptions import InvalidOutputValue, WeightError
-from hathorlib.scripts import P2PKH, MultiSig, parse_address_script
+from hathorlib.scripts import P2PKH, DataScript, MultiSig, parse_address_script
 from hathorlib.utils import int_to_bytes, unpack, unpack_len
 
 settings = HathorSettings()
@@ -397,14 +397,34 @@ class BaseTransaction(ABC):
         return False
 
     def is_standard(self, std_max_output_script_size: int = settings.PUSHTX_MAX_OUTPUT_SCRIPT_SIZE,
-                    only_standard_script_type: bool = True) -> bool:
+                    only_standard_script_type: bool = True,
+                    max_number_of_data_script_outputs: int = settings.MAX_DATA_SCRIPT_OUTPUTS) -> bool:
         """ Return True is the transaction is standard
         """
+        # First we check if t's an NFT standard
+        # We could remove this because now that we are adding support
+        # for some data script outputs in a transaction, this would
+        # also be considered a standard but if we change our minds
+        # about the data scripts in the future we would need to remember
+        # to add NFT support back, so I'm just keeping this here
         if self.is_nft_creation_standard():
             return True
 
+        # We've discussed to allow any number of Data Script outputs but we decided to
+        # add some restrictions first. Because of that we are not making Data Script a
+        # standard script and we are handling it manually
+        number_of_data_script_outputs = 0
         for output in self.outputs:
             if not output.is_standard_script(std_max_output_script_size, only_standard_script_type):
+                # If not standard then we check if it's a data script with valid size
+                if output.is_script_size_valid(std_max_output_script_size) and output.is_data_script():
+                    # Then we check if it already reached the maximum number of data script outputs
+                    if number_of_data_script_outputs == max_number_of_data_script_outputs:
+                        return False
+                    else:
+                        number_of_data_script_outputs += 1
+                        continue
+
                 return False
 
         return True
@@ -585,11 +605,22 @@ class TxOutput:
             data['decoded'] = self.to_human_readable()
         return data
 
+    def is_script_size_valid(self, max_output_script_size: int = settings.PUSHTX_MAX_OUTPUT_SCRIPT_SIZE) -> bool:
+        """Return True if output script size is valid"""
+        if len(self.script) > max_output_script_size:
+            return False
+
+        return True
+
+    def is_data_script(self) -> bool:
+        """Return True if output script is a DataScript"""
+        return DataScript.parse_script(self.script) is not None
+
     def is_standard_script(self, std_max_output_script_size: int = settings.PUSHTX_MAX_OUTPUT_SCRIPT_SIZE,
                            only_standard_script_type: bool = True) -> bool:
         """Return True if this output has a standard script."""
         # First check: script size limit
-        if len(self.script) > std_max_output_script_size:
+        if not self.is_script_size_valid(std_max_output_script_size):
             return False
 
         # Second check: output script type

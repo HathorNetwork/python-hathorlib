@@ -47,3 +47,6 @@ class HathorSettings(NamedTuple):
 
     # Maximum size of the tx output's script allowed for a tx to be standard
     PUSHTX_MAX_OUTPUT_SCRIPT_SIZE: int = 256
+
+    # Maximum number of tx outputs of Data Script type
+    MAX_DATA_SCRIPT_OUTPUTS: int = 25
