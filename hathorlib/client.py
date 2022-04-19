@@ -4,6 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 from typing import Any, Dict, List, NamedTuple, Optional, cast
 from urllib.parse import urljoin
+from hathorlib.base_transaction import tx_or_block_from_bytes
 
 from hathorlib.exceptions import PushTxFailed
 
@@ -128,11 +129,21 @@ class HathorClient:
     async def push_tx_or_block(self, raw: bytes) -> bool:
         """Push a new tx or block to the backend."""
         assert self._session is not None
-        data = {
-            'hexdata': raw.hex(),
-        }
 
-        resp = await self._session.post(self._get_url('submit_block'), json=data)
+        tx = tx_or_block_from_bytes(raw)
+
+        if tx.is_block:
+            data = {
+                'hexdata': raw.hex(),
+            }
+
+            resp = await self._session.post(self._get_url('submit_block'), json=data)
+        else:
+            data = {
+                'hex_tx': raw.hex(),
+            }
+
+            resp = await self._session.post(self._get_url('push_tx'), json=data)
 
         status = resp.status
         if status > 299:
