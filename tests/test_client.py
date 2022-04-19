@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, Mock
 import asynctest  # type: ignore
 
 from hathorlib.client import HathorClient
+from hathorlib.exceptions import PushTxFailed
 
 
 class ClientTestCase(asynctest.TestCase):  # type: ignore
@@ -50,5 +51,5 @@ class ClientTestCase(asynctest.TestCase):  # type: ignore
         self.client._session.post = post_mock
 
         # Execution
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(PushTxFailed):
             await self.client.push_tx_or_block(bytes('123123', 'utf8'))

@@ -5,6 +5,8 @@
 from typing import Any, Dict, List, NamedTuple, Optional, cast
 from urllib.parse import urljoin
 
+from hathorlib.exceptions import PushTxFailed
+
 try:
     from aiohttp import ClientSession
     from structlog import get_logger
@@ -136,7 +138,7 @@ class HathorClient:
         if status > 299:
             response = await resp.text()
             self.log.error('Error pushing tx or block', response=response, status=status)
-            raise RuntimeError('Cannot push tx or block')
+            raise PushTxFailed('Cannot push tx or block')
 
         json = await resp.json()
 

@@ -27,6 +27,10 @@ class TxValidationError(HathorError):
     """Base class for tx validation errors"""
 
 
+class HathorClientError(HathorError):
+    """Base class for errors when communicating with the fullnode"""
+
+
 class ParentDoesNotExist(TxValidationError):
     """A parent does not exist"""
 
@@ -162,3 +166,7 @@ class VerifyFailed(ScriptError):
 
 class TimeLocked(ScriptError):
     """Transaction is invalid because it is time locked"""
+
+
+class PushTxFailed(HathorClientError):
+    """An attempt to push a tx/block to the fullnode failed"""
