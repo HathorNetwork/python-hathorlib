@@ -4,8 +4,8 @@
 # LICENSE file in the root directory of this source tree.
 from typing import Any, Dict, List, NamedTuple, Optional, cast
 from urllib.parse import urljoin
-from hathorlib.base_transaction import tx_or_block_from_bytes
 
+from hathorlib.base_transaction import tx_or_block_from_bytes
 from hathorlib.exceptions import PushTxFailed
 
 try:

@@ -39,7 +39,7 @@ class ClientTestCase(asynctest.TestCase):  # type: ignore
     async def test_push_block(self):
         # Preparation
         hex = ('000001ffffffe8b789180000001976a9147fd4ae0e4fb2d2854e76d359029d8078bb9'
-              '9649e88ac40350000000000005e0f84a9000000000000000000000000000000278a7e')
+               '9649e88ac40350000000000005e0f84a9000000000000000000000000000000278a7e')
 
         data = bytes.fromhex(hex)
 
@@ -48,7 +48,7 @@ class ClientTestCase(asynctest.TestCase):  # type: ignore
                 self.status = 200
 
             async def json(self):
-                return { "result": "success" }
+                return {"result": "success"}
 
         self.client._session.post = AsyncMock(return_value=MockResponse())
 
@@ -80,7 +80,7 @@ class ClientTestCase(asynctest.TestCase):  # type: ignore
                 self.status = 200
 
             async def json(self):
-                return { "result": "success" }
+                return {"result": "success"}
 
         self.client._session.post = AsyncMock(return_value=MockResponse())
 
@@ -92,7 +92,6 @@ class ClientTestCase(asynctest.TestCase):  # type: ignore
             'v1a/push_tx',
             json={'hex_tx': hex}
         )
-
 
     async def test_push_tx_or_block_error(self):
         # Preparation
@@ -111,5 +110,5 @@ class ClientTestCase(asynctest.TestCase):  # type: ignore
         # Execution
         with self.assertRaises(PushTxFailed):
             data = bytes.fromhex('000001ffffffe8b789180000001976a9147fd4ae0e4fb2d2854e76d359029d8078bb9'
-                                '9649e88ac40350000000000005e0f84a9000000000000000000000000000000278a7e')
+                                 '9649e88ac40350000000000005e0f84a9000000000000000000000000000000278a7e')
             await self.client.push_tx_or_block(data)
