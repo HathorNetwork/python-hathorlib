@@ -133,16 +133,10 @@ class HathorClient:
         tx = tx_or_block_from_bytes(raw)
 
         if tx.is_block:
-            data = {
-                'hexdata': raw.hex(),
-            }
-
+            data = {'hexdata': raw.hex()}
             resp = await self._session.post(self._get_url('submit_block'), json=data)
         else:
-            data = {
-                'hex_tx': raw.hex(),
-            }
-
+            data = {'hex_tx': raw.hex()}
             resp = await self._session.post(self._get_url('push_tx'), json=data)
 
         status = resp.status
