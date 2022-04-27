@@ -401,6 +401,10 @@ class BaseTransaction(ABC):
                     max_number_of_data_script_outputs: int = settings.MAX_DATA_SCRIPT_OUTPUTS) -> bool:
         """ Return True is the transaction is standard
         """
+        # TODO in the future we should have a way to know which standard validation failed
+        # we could have an array of errors from args that we append an error object
+        # or a bool parameter "raise_on_non_standard", which will raise an error if it's non standard
+
         # First we check if t's an NFT standard
         # We could remove this because now that we are adding support
         # for some data script outputs in a transaction, this would
