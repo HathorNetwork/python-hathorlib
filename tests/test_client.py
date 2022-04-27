@@ -6,19 +6,26 @@ LICENSE file in the root directory of this source tree.
 """
 
 import asyncio
-import unittest
 from unittest.mock import MagicMock, Mock
 
+import asynctest  # type: ignore
+
 from hathorlib.client import HathorClient
+from hathorlib.exceptions import PushTxFailed
+from tests.test_util import AsyncMock
 
 
-class ClientTestCase(unittest.TestCase):
+class ClientTestCase(asynctest.TestCase):  # type: ignore
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
 
         self.client = HathorClient(server_url='')
         self.loop.run_until_complete(self.client.start())
+
+        self.client._session = Mock()
+        self.client._session.get = MagicMock(return_value=None)
+        self.client._session.post = MagicMock(return_value=None)
 
     def _run_all_pending_events(self):
         """Run all pending events."""
@@ -29,6 +36,79 @@ class ClientTestCase(unittest.TestCase):
         future = asyncio.ensure_future(_fn())
         self.loop.run_until_complete(future)
 
-    def test_version(self):
-        self.client._session = Mock()
-        self.client._session.get = MagicMock(return_value=None)
+    async def test_push_block(self):
+        # Preparation
+        hex = ('000001ffffffe8b789180000001976a9147fd4ae0e4fb2d2854e76d359029d8078bb9'
+               '9649e88ac40350000000000005e0f84a9000000000000000000000000000000278a7e')
+
+        data = bytes.fromhex(hex)
+
+        class MockResponse:
+            def __init__(self):
+                self.status = 200
+
+            async def json(self):
+                return {"result": "success"}
+
+        self.client._session.post = AsyncMock(return_value=MockResponse())
+
+        # Execution
+        await self.client.push_tx_or_block(data)
+
+        # Assertion
+        self.client._session.post.assert_called_once_with(
+            'v1a/submit_block',
+            json={'hexdata': hex}
+        )
+
+    async def test_push_transaction(self):
+        # Preparation
+        hex = ('0001000102000001e0e88216036e4e52872ba60a96df7570c3e29cc30eda6dd92ea0fd'
+               '304c00006a4730450221009fa4798bb69f66035013063c13f1a970ec58111bcead277d'
+               '9c93e45c2b6885fe022012e039b26cc4a4cb0a8a5abb7deb7bb78610ed362bf422efa2'
+               '47db37c5a841e12102bc1213ea99ab55effcff760f94c09f8b1a0b7b990c01128d06b4'
+               'a8c5c5f41f8400089f0800001976a91438fb3bc92b76819e9c19ef7c079d327c8fcd19'
+               '9288ac02de2d3800001976a9148d880c42ddcf78a2da5d06558f13515508720b4088ac'
+               '403518509c63f9195ecfd7d40200001ea9d6e1d31da6893fcec594dc3fa8b6819ae126'
+               '8c190f7a1441302226e2000007d1c5add7b9085037cfc591f1008dff4fe8a9158fd1a4'
+               '840a6dd5d4e4e600d2da8d')
+
+        data = bytes.fromhex(hex)
+
+        class MockResponse:
+            def __init__(self):
+                self.status = 200
+
+            async def json(self):
+                return {"result": "success"}
+
+        self.client._session.post = AsyncMock(return_value=MockResponse())
+
+        # Execution
+        await self.client.push_tx_or_block(data)
+
+        # Assertion
+        self.client._session.post.assert_called_once_with(
+            'v1a/push_tx',
+            json={'hex_tx': hex}
+        )
+
+    async def test_push_tx_or_block_error(self):
+        # Preparation
+        class MockResponse:
+            def __init__(self):
+                self.status = 500
+
+            async def text(self):
+                return "Test Response"
+
+        async def post_mock(url, json):
+            return MockResponse()
+
+        self.client._session.post = post_mock
+
+        # Execution
+        with self.assertRaises(PushTxFailed):
+            data = bytes.fromhex('000001ffffffe8b789180000001976a9147fd4ae0e4fb2d2854e76d359029d8078bb9'
+                                 '9649e88ac40350000000000005e0f84a9000000000000000000000000000000278a7e')
+            await self.client.push_tx_or_block(data)

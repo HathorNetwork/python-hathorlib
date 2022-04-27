@@ -5,6 +5,9 @@
 from typing import Any, Dict, List, NamedTuple, Optional, cast
 from urllib.parse import urljoin
 
+from hathorlib.base_transaction import tx_or_block_from_bytes
+from hathorlib.exceptions import PushTxFailed
+
 try:
     from aiohttp import ClientSession
     from structlog import get_logger
@@ -126,8 +129,22 @@ class HathorClient:
     async def push_tx_or_block(self, raw: bytes) -> bool:
         """Push a new tx or block to the backend."""
         assert self._session is not None
-        data = {
-            'hexdata': raw.hex(),
-        }
-        async with self._session.post(self._get_url('submit_block'), json=data) as resp:
-            return cast(bool, (await resp.json())['result'])
+
+        tx = tx_or_block_from_bytes(raw)
+
+        if tx.is_block:
+            data = {'hexdata': raw.hex()}
+            resp = await self._session.post(self._get_url('submit_block'), json=data)
+        else:
+            data = {'hex_tx': raw.hex()}
+            resp = await self._session.post(self._get_url('push_tx'), json=data)
+
+        status = resp.status
+        if status > 299:
+            response = await resp.text()
+            self.log.error('Error pushing tx or block', response=response, status=status)
+            raise PushTxFailed('Cannot push tx or block')
+
+        json = await resp.json()
+
+        return cast(bool, json['result'])
