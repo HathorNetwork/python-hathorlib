@@ -37,7 +37,8 @@ python = ">=3.6,<4.0"
 base58 = ">=2.1.0"
 structlog = {version = ">=20.0.0", optional = true}
 aiohttp = {version = ">=3.7.0", optional = true}
-cryptography = ">=3.3.1"
+cryptography = ">=38.0.3"
+pycoin = "^0.92.20220529"
 
 # TODO: We should migrate from asynctest to pytest-asyncio when we raise our minimum Python version to 3.7
 [tool.poetry.dev-dependencies]
