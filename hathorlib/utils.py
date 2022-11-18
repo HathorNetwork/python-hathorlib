@@ -7,7 +7,7 @@ LICENSE file in the root directory of this source tree.
 import hashlib
 import re
 import struct
-from typing import Any, Tuple
+from typing import Any, Tuple, cast
 
 import base58
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -174,9 +174,21 @@ def get_public_key_bytes_compressed(public_key: ec.EllipticCurvePublicKey) -> by
     return public_key.public_bytes(Encoding.X962, PublicFormat.CompressedPoint)
 
 
-def get_hash160(public_key_bytes: bytes) -> bytes:
-    """Calculate hash160 of the input. First sha256 followed by a RIPEMD-160."""
-    key_hash = hashlib.sha256(public_key_bytes)
-    h = hashlib.new('ripemd160')
-    h.update(key_hash.digest())
-    return h.digest()
+try:
+    hashlib.new('ripemd160', b'')
+except Exception:
+    # XXX: the source says "Test-only pure Python RIPEMD160 implementation", however for our case this is acceptable
+    #      for more details see: https://github.com/bitcoin/bitcoin/pull/23716/files which has a copy of the same code
+    import pycoin.contrib.ripemd160  # type: ignore[import]
+
+    def get_hash160(public_key_bytes: bytes) -> bytes:
+        """The input is hashed twice: first with SHA-256 and then with RIPEMD-160"""
+        key_hash = hashlib.sha256(public_key_bytes)
+        return cast(bytes, pycoin.contrib.ripemd160.ripemd160(key_hash.digest()))
+else:
+    def get_hash160(public_key_bytes: bytes) -> bytes:
+        """The input is hashed twice: first with SHA-256 and then with RIPEMD-160"""
+        key_hash = hashlib.sha256(public_key_bytes)
+        h = hashlib.new('ripemd160')
+        h.update(key_hash.digest())
+        return h.digest()
