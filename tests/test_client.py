@@ -6,16 +6,18 @@ LICENSE file in the root directory of this source tree.
 """
 
 import asyncio
+from unittest import TestCase
 from unittest.mock import MagicMock, Mock
 
-import asynctest  # type: ignore
+import pytest
 
 from hathorlib.client import HathorClient
 from hathorlib.exceptions import PushTxFailed
 from tests.test_util import AsyncMock
 
 
-class ClientTestCase(asynctest.TestCase):  # type: ignore
+@pytest.mark.asyncio
+class ClientTestCase(TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)

@@ -18,13 +18,12 @@ jobs:
     strategy:
       matrix:
         python:
-        - 3.6
-        - 3.7
-        - 3.8
-        - 3.9
+        - "3.9"
+        - "3.10"
+        - "3.11"
         os:
-        - ubuntu-latest
-        - macos-latest
+        - ubuntu-22.04
+        - macos-12
         # - windows-latest
     steps:
     - name: Checkout
@@ -34,9 +33,9 @@ jobs:
       with:
         python-version: ${{ matrix.python }}
     - name: Install Poetry
-      run: pip -q --no-input install poetry
+      run: pipx install poetry
     - name: Install Poetry dependencies
-      run: poetry install -n -E client
+      run: poetry install -n --no-root -E client
     - name: Run linters
       run: poetry run make check
     - name: Run tests
@@ -44,4 +43,4 @@ jobs:
       continue-on-error: ${{ matrix.tier > 1 }}
     - name: Upload coverage
       uses: codecov/codecov-action@v1
-      if: matrix.python == 3.6 && matrix.os == 'ubuntu-latest'
+      if: matrix.python == 3.9 && startsWith(matrix.os, 'ubuntu')
