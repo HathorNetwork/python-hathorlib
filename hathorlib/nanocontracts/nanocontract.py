@@ -12,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import struct
-from typing import List, NamedTuple, Optional, Tuple
+from typing import NamedTuple, Tuple
 
+from hathorlib.base_transaction import TxVersion
 from hathorlib.transaction import Transaction
-from hathorlib.base_transaction import TxInput, TxOutput, TxVersion
 from hathorlib.utils import int_to_bytes, unpack, unpack_len
-
 
 NC_VERSION = 1
 
