@@ -67,6 +67,7 @@ class TxVersion(IntEnum):
     REGULAR_TRANSACTION = 1
     TOKEN_CREATION_TRANSACTION = 2
     MERGE_MINED_BLOCK = 3
+    NANO_CONTRACT = 4
 
     @classmethod
     def _missing_(cls, value: Any) -> 'TxVersion':
@@ -80,11 +81,13 @@ class TxVersion(IntEnum):
 
     def get_cls(self) -> Type['BaseTransaction']:
         from hathorlib import Block, TokenCreationTransaction, Transaction
+        from hathorlib.nanocontracts.nanocontract import NanoContract
 
         cls_map: Dict[TxVersion, Type[BaseTransaction]] = {
             TxVersion.REGULAR_BLOCK: Block,
             TxVersion.REGULAR_TRANSACTION: Transaction,
             TxVersion.TOKEN_CREATION_TRANSACTION: TokenCreationTransaction,
+            TxVersion.NANO_CONTRACT: NanoContract,
         }
 
         cls = cls_map.get(self)
