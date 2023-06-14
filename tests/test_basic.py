@@ -142,3 +142,39 @@ class HathorCommonsTestCase(unittest.TestCase):
         tx3 = tx_or_block_from_bytes(tx_bytes_non_standard)
         self.assertFalse(tx3.is_standard())
         self.assertTrue(tx3.is_standard(only_standard_script_type=False))
+
+    def test_tx_version_and_signal_bits(self):
+        from hathorlib.base_transaction import TxVersion
+
+        # test invalid type
+        with self.assertRaises(AssertionError) as cm:
+            TxVersion('test')
+
+        self.assertEqual(str(cm.exception), "Value 'test' must be an integer")
+
+        # test one byte max value
+        with self.assertRaises(AssertionError) as cm:
+            TxVersion(0x100)
+
+        self.assertEqual(str(cm.exception), 'Value 0x100 must not be larger than one byte')
+
+        # test invalid version
+        with self.assertRaises(ValueError) as cm:
+            TxVersion(10)
+
+        self.assertEqual(str(cm.exception), 'Invalid version: 10')
+
+        # test get the correct class
+        version = TxVersion(0x00)
+        self.assertEqual(version.get_cls(), Block)
+        version = TxVersion(0x01)
+        self.assertEqual(version.get_cls(), Transaction)
+
+        # test serialization doesn't mess up with signal_bits and version
+        data = bytes.fromhex('f00001ffffffe8b789180000001976a9147fd4ae0e4fb2d2854e76d359029d8078bb9'
+                             '9649e88ac40350000000000005e0f84a9000000000000000000000000000000278a7e')
+        block = Block.create_from_struct(data)
+        block2 = block.clone()
+
+        self.assertEqual(block.signal_bits, block2.signal_bits)
+        self.assertEqual(block.version, block2.version)
