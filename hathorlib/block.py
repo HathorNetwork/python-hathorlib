@@ -11,11 +11,11 @@ from typing import Dict
 from hathorlib.base_transaction import BaseTransaction, TxOutput
 from hathorlib.utils import int_to_bytes, unpack, unpack_len
 
-# Version (H), outputs len (B)
-_FUNDS_FORMAT_STRING = '!HB'
+# Signal bits (B), version (B), outputs len (B)
+_FUNDS_FORMAT_STRING = '!BBB'
 
-# Version (H), inputs len (B) and outputs len (B)
-_SIGHASH_ALL_FORMAT_STRING = '!HBB'
+# Signal bits (B), version (B), inputs len (B) and outputs len (B)
+_SIGHASH_ALL_FORMAT_STRING = '!BBBB'
 
 
 class Block(BaseTransaction):
@@ -61,7 +61,7 @@ class Block(BaseTransaction):
 
         :raises ValueError: when the sequence of bytes is incorect
         """
-        (self.version, outputs_len), buf = unpack(_FUNDS_FORMAT_STRING, buf)
+        (self.signal_bits, self.version, outputs_len), buf = unpack(_FUNDS_FORMAT_STRING, buf)
 
         for _ in range(outputs_len):
             txout, buf = TxOutput.create_from_bytes(buf)
@@ -91,7 +91,7 @@ class Block(BaseTransaction):
         :return: funds data serialization of the block
         :rtype: bytes
         """
-        struct_bytes = pack(_FUNDS_FORMAT_STRING, self.version, len(self.outputs))
+        struct_bytes = pack(_FUNDS_FORMAT_STRING, self.signal_bits, self.version, len(self.outputs))
 
         for tx_output in self.outputs:
             struct_bytes += bytes(tx_output)
