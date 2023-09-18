@@ -26,11 +26,11 @@ from hathorlib.utils import clean_token_string, int_to_bytes, unpack, unpack_len
 
 settings = HathorSettings()
 
-# Version (H), inputs len (B), outputs len (B)
-_FUNDS_FORMAT_STRING = '!HBB'
+# Signal bits (B), version (B), inputs len (B), outputs len (B)
+_FUNDS_FORMAT_STRING = '!BBBB'
 
-# Version (H), inputs len (B), outputs len (B)
-_SIGHASH_ALL_FORMAT_STRING = '!HBB'
+# Signal bist (B), version (B), inputs len (B), outputs len (B)
+_SIGHASH_ALL_FORMAT_STRING = '!BBBB'
 
 # used when (de)serializing token information
 # version 1 expects only token name and symbol
@@ -67,7 +67,7 @@ class TokenCreationTransaction(Transaction):
 
         :raises ValueError: when the sequence of bytes is incorect
         """
-        (self.version, inputs_len, outputs_len), buf = unpack(_FUNDS_FORMAT_STRING, buf)
+        (self.signal_bits, self.version, inputs_len, outputs_len), buf = unpack(_FUNDS_FORMAT_STRING, buf)
 
         for _ in range(inputs_len):
             txin, buf = TxInput.create_from_bytes(buf)
@@ -88,7 +88,13 @@ class TokenCreationTransaction(Transaction):
         :return: funds data serialization of the transaction
         :rtype: bytes
         """
-        struct_bytes = pack(_FUNDS_FORMAT_STRING, self.version, len(self.inputs), len(self.outputs))
+        struct_bytes = pack(
+            _FUNDS_FORMAT_STRING,
+            self.signal_bits,
+            self.version,
+            len(self.inputs),
+            len(self.outputs)
+        )
 
         tx_inputs = []
         for tx_input in self.inputs:
@@ -110,7 +116,13 @@ class TokenCreationTransaction(Transaction):
         :return: Serialization of the inputs, outputs and tokens
         :rtype: bytes
         """
-        struct_bytes = pack(_SIGHASH_ALL_FORMAT_STRING, self.version, len(self.inputs), len(self.outputs))
+        struct_bytes = pack(
+            _SIGHASH_ALL_FORMAT_STRING,
+            self.signal_bits,
+            self.version,
+            len(self.inputs),
+            len(self.outputs)
+        )
 
         tx_inputs = []
         for tx_input in self.inputs:
