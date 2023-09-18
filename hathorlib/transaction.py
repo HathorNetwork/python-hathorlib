@@ -17,11 +17,11 @@ from hathorlib.utils import unpack, unpack_len
 
 settings = HathorSettings()
 
-# Version (H), token uids len (B) and inputs len (B), outputs len (B).
-_FUNDS_FORMAT_STRING = '!HBBB'
+# Signal bits (B), version (B), token uids len (B) and inputs len (B), outputs len (B).
+_FUNDS_FORMAT_STRING = '!BBBBB'
 
-# Version (H), inputs len (B), and outputs len (B), token uids len (B).
-_SIGHASH_ALL_FORMAT_STRING = '!HBBB'
+# Signal bits (B), version (B), inputs len (B), and outputs len (B), token uids len (B).
+_SIGHASH_ALL_FORMAT_STRING = '!BBBBB'
 
 TokenInfo = namedtuple('TokenInfo', 'amount can_mint can_melt')
 
@@ -79,7 +79,10 @@ class Transaction(BaseTransaction):
 
         :raises ValueError: when the sequence of bytes is incorect
         """
-        (self.version, tokens_len, inputs_len, outputs_len), buf = unpack(_FUNDS_FORMAT_STRING, buf)
+        (self.signal_bits, self.version, tokens_len, inputs_len, outputs_len), buf = unpack(
+            _FUNDS_FORMAT_STRING,
+            buf
+        )
 
         for _ in range(tokens_len):
             token_uid, buf = unpack_len(TX_HASH_SIZE, buf)
@@ -101,7 +104,14 @@ class Transaction(BaseTransaction):
         :return: funds data serialization of the transaction
         :rtype: bytes
         """
-        struct_bytes = pack(_FUNDS_FORMAT_STRING, self.version, len(self.tokens), len(self.inputs), len(self.outputs))
+        struct_bytes = pack(
+            _FUNDS_FORMAT_STRING,
+            self.signal_bits,
+            self.version,
+            len(self.tokens),
+            len(self.inputs),
+            len(self.outputs)
+        )
 
         for token_uid in self.tokens:
             struct_bytes += token_uid
@@ -120,8 +130,16 @@ class Transaction(BaseTransaction):
         :return: Serialization of the inputs, outputs and tokens
         :rtype: bytes
         """
-        struct_bytes = bytearray(pack(_SIGHASH_ALL_FORMAT_STRING, self.version, len(self.tokens), len(self.inputs),
-                                 len(self.outputs)))
+        struct_bytes = bytearray(
+            pack(
+                _SIGHASH_ALL_FORMAT_STRING,
+                self.signal_bits,
+                self.version,
+                len(self.tokens),
+                len(self.inputs),
+                len(self.outputs)
+            )
+        )
 
         for token_uid in self.tokens:
             struct_bytes += token_uid
