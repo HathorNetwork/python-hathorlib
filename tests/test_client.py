@@ -97,3 +97,39 @@ class ClientTestCase(IsolatedAsyncioTestCase):
             data = bytes.fromhex('000001ffffffe8b789180000001976a9147fd4ae0e4fb2d2854e76d359029d8078bb9'
                                  '9649e88ac40350000000000005e0f84a9000000000000000000000000000000278a7e')
             await self.client.push_tx_or_block(data)
+
+    async def test_get_block_template(self) -> None:
+        # Preparation
+        class MockResponse:
+            def __init__(self):
+                self.status = 200
+
+            async def json(self):
+                return dict(
+                    timestamp=12345,
+                    parents=['01', '02', '03'],
+                    weight=60,
+                    outputs=[dict(value=6400)],
+                    signal_bits=0b0101,
+                    metadata=dict(
+                        height=999
+                    )
+                )
+
+        self.client._session = Mock()
+        self.client._session.get = AsyncMock(return_value=MockResponse())
+
+        # Execution
+        template = await self.client.get_block_template(address='my_address')
+
+        # Assertion
+        expected_data = '05000100001900000000404e00000000000000003039030102030000000000000000000000000000000000'
+        expected_height = 999
+
+        self.assertEqual(template.data.hex(), expected_data)
+        self.assertEqual(template.height, expected_height)
+
+        self.client._session.get.assert_called_once_with(
+            'v1a/get_block_template',
+            params=dict(address='my_address')
+        )
