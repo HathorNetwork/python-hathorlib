@@ -1,6 +1,5 @@
 __pycache__/
 *.py[cod]
-/poetry.lock
 /dist/
 /.coverage
 /htmlcov/
