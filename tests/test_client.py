@@ -39,6 +39,7 @@ class ClientTestCase(TestCase):
         self.loop.run_until_complete(future)
 
     async def test_push_block(self):
+        raise Exception
         # Preparation
         hex = ('000001ffffffe8b789180000001976a9147fd4ae0e4fb2d2854e76d359029d8078bb9'
                '9649e88ac40350000000000005e0f84a9000000000000000000000000000000278a7e')
@@ -91,12 +92,14 @@ class ClientTestCase(TestCase):
 
         # Assertion
         self.client._session.post.assert_called_once_with(
-            'v1a/push_tx',
+            'v1a/nonono',
             json={'hex_tx': hex}
         )
 
     async def test_push_tx_or_block_error(self):
+        assert 1 == 2
         # Preparation
+
         class MockResponse:
             def __init__(self):
                 self.status = 500
