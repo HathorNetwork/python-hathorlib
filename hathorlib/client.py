@@ -85,37 +85,38 @@ class HathorClient:
         params = {}
         if address is not None:
             params['address'] = address
-        async with self._session.get(self._get_url('get_block_template'), params=params) as resp:
-            if resp.status != 200:
-                self.log.error('Error getting block template', status=resp.status)
-                raise RuntimeError('Cannot get block template (status {})'.format(resp.status))
+        resp = await self._session.get(self._get_url('get_block_template'), params=params)
+        if resp.status != 200:
+            self.log.error('Error getting block template', status=resp.status)
+            raise RuntimeError('Cannot get block template (status {})'.format(resp.status))
 
-            data = await resp.json()
+        data = await resp.json()
 
-            if data.get('error'):
-                self.log.error('Error getting block template', data=data)
-                raise RuntimeError('Cannot get block template')
+        if data.get('error'):
+            self.log.error('Error getting block template', data=data)
+            raise RuntimeError('Cannot get block template')
 
-            # Get height.
-            metadata = data.get('metadata', {})
-            height = metadata['height']
+        # Get height.
+        metadata = data.get('metadata', {})
+        height = metadata['height']
 
-            # Build block.
-            blk = Block()
-            blk.version = 0
-            blk.timestamp = data['timestamp']
-            blk.weight = data['weight']
-            blk.parents = [bytes.fromhex(x) for x in data['parents']]
-            blk.data = b''
+        # Build block.
+        blk = Block()
+        blk.signal_bits = data['signal_bits']
+        blk.version = 0
+        blk.timestamp = data['timestamp']
+        blk.weight = data['weight']
+        blk.parents = [bytes.fromhex(x) for x in data['parents']]
+        blk.data = b''
 
-            do = data['outputs'][0]
-            txout = TxOutput(
-                value=do['value'],
-                token_data=0,
-                script=b'',
-            )
-            blk.outputs = [txout]
-            return BlockTemplate(data=bytes(blk), height=height)
+        do = data['outputs'][0]
+        txout = TxOutput(
+            value=do['value'],
+            token_data=0,
+            script=b'',
+        )
+        blk.outputs = [txout]
+        return BlockTemplate(data=bytes(blk), height=height)
 
     async def get_tx_parents(self) -> List[bytes]:
         """Return parents for a new transaction."""

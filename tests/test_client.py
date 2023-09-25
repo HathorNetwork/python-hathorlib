@@ -5,40 +5,20 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
-import asyncio
-from unittest import TestCase
-from unittest.mock import MagicMock, Mock
-
-import pytest
+from unittest import IsolatedAsyncioTestCase
+from unittest.mock import Mock
 
 from hathorlib.client import HathorClient
 from hathorlib.exceptions import PushTxFailed
 from tests.test_util import AsyncMock
 
 
-@pytest.mark.asyncio
-class ClientTestCase(TestCase):
-    def setUp(self):
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
-
+class ClientTestCase(IsolatedAsyncioTestCase):
+    async def asyncSetUp(self) -> None:
         self.client = HathorClient(server_url='')
-        self.loop.run_until_complete(self.client.start())
+        await self.client.start()
 
-        self.client._session = Mock()
-        self.client._session.get = MagicMock(return_value=None)
-        self.client._session.post = MagicMock(return_value=None)
-
-    def _run_all_pending_events(self):
-        """Run all pending events."""
-        # pending = asyncio.all_tasks(self.loop)
-        # self.loop.run_until_complete(asyncio.gather(*pending))
-        async def _fn():
-            pass
-        future = asyncio.ensure_future(_fn())
-        self.loop.run_until_complete(future)
-
-    async def test_push_block(self):
+    async def test_push_block(self) -> None:
         # Preparation
         hex = ('000001ffffffe8b789180000001976a9147fd4ae0e4fb2d2854e76d359029d8078bb9'
                '9649e88ac40350000000000005e0f84a9000000000000000000000000000000278a7e')
@@ -52,6 +32,7 @@ class ClientTestCase(TestCase):
             async def json(self):
                 return {"result": "success"}
 
+        self.client._session = Mock()
         self.client._session.post = AsyncMock(return_value=MockResponse())
 
         # Execution
@@ -63,7 +44,7 @@ class ClientTestCase(TestCase):
             json={'hexdata': hex}
         )
 
-    async def test_push_transaction(self):
+    async def test_push_transaction(self) -> None:
         # Preparation
         hex = ('0001000102000001e0e88216036e4e52872ba60a96df7570c3e29cc30eda6dd92ea0fd'
                '304c00006a4730450221009fa4798bb69f66035013063c13f1a970ec58111bcead277d'
@@ -84,6 +65,7 @@ class ClientTestCase(TestCase):
             async def json(self):
                 return {"result": "success"}
 
+        self.client._session = Mock()
         self.client._session.post = AsyncMock(return_value=MockResponse())
 
         # Execution
@@ -95,7 +77,7 @@ class ClientTestCase(TestCase):
             json={'hex_tx': hex}
         )
 
-    async def test_push_tx_or_block_error(self):
+    async def test_push_tx_or_block_error(self) -> None:
         # Preparation
         class MockResponse:
             def __init__(self):
@@ -107,6 +89,7 @@ class ClientTestCase(TestCase):
         async def post_mock(url, json):
             return MockResponse()
 
+        self.client._session = Mock()
         self.client._session.post = post_mock
 
         # Execution
@@ -114,3 +97,39 @@ class ClientTestCase(TestCase):
             data = bytes.fromhex('000001ffffffe8b789180000001976a9147fd4ae0e4fb2d2854e76d359029d8078bb9'
                                  '9649e88ac40350000000000005e0f84a9000000000000000000000000000000278a7e')
             await self.client.push_tx_or_block(data)
+
+    async def test_get_block_template(self) -> None:
+        # Preparation
+        class MockResponse:
+            def __init__(self):
+                self.status = 200
+
+            async def json(self):
+                return dict(
+                    timestamp=12345,
+                    parents=['01', '02', '03'],
+                    weight=60,
+                    outputs=[dict(value=6400)],
+                    signal_bits=0b0101,
+                    metadata=dict(
+                        height=999
+                    )
+                )
+
+        self.client._session = Mock()
+        self.client._session.get = AsyncMock(return_value=MockResponse())
+
+        # Execution
+        template = await self.client.get_block_template(address='my_address')
+
+        # Assertion
+        expected_data = '05000100001900000000404e00000000000000003039030102030000000000000000000000000000000000'
+        expected_height = 999
+
+        self.assertEqual(template.data.hex(), expected_data)
+        self.assertEqual(template.height, expected_height)
+
+        self.client._session.get.assert_called_once_with(
+            'v1a/get_block_template',
+            params=dict(address='my_address')
+        )
