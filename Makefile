@@ -42,6 +42,9 @@ check: flake8 isort-check mypy
 
 # formatting:
 
+.PHONY: fmt
+fmt: isort
+
 .PHONY: isort
 isort: $(py_sources) $(py_tests)
 	isort -ac $^
