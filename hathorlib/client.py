@@ -2,6 +2,7 @@
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+import re
 from typing import Any, Dict, List, NamedTuple, Optional, cast
 from urllib.parse import urljoin
 
@@ -19,6 +20,15 @@ from hathorlib import Block, TxOutput
 REQUIRED_HATHOR_API_VERSION = 'v1a'
 
 logger = get_logger()
+
+
+# This regex was copied from https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+semver_pattern = (
+    r"(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)"
+    r"(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
+    r"(?:\+(?P<metadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?"
+)
+semver_re = re.compile(semver_pattern)
 
 
 class BlockTemplate(NamedTuple):
@@ -41,6 +51,8 @@ class HathorVersion(NamedTuple):
     major: int
     minor: int
     patch: int
+    prerelease: Optional[str] = None
+    metadata: Optional[str] = None
 
 
 class HathorClient:
@@ -73,11 +85,25 @@ class HathorClient:
     async def version(self) -> HathorVersion:
         """Return the version of the backend."""
         assert self._session is not None
+
         async with self._session.get(self._get_url('version')) as resp:
             data = await resp.json()
-            ver = data['version']
-            major, minor, patch = ver.split('.')
-            return HathorVersion(int(major), int(minor), int(patch))
+            version = data['version']
+
+            match = semver_re.match(version)
+
+            if match:
+                result = match.groupdict()
+
+                return HathorVersion(
+                    major=int(result['major']),
+                    minor=int(result['minor']),
+                    patch=int(result['patch']),
+                    prerelease=result.get('prerelease'),
+                    metadata=result.get('metadata'),
+                )
+            else:
+                raise RuntimeError(f'Cannot parse version {version}')
 
     async def get_block_template(self, address: Optional[str] = None) -> BlockTemplate:
         """Return a block template."""

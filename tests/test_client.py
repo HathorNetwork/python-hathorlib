@@ -5,6 +5,8 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import Mock
 
@@ -133,3 +135,49 @@ class ClientTestCase(IsolatedAsyncioTestCase):
             'v1a/get_block_template',
             params=dict(address='my_address')
         )
+
+    async def test_version(self) -> None:
+        # Preparation
+        versions = [
+            "1.2.3",
+            "1.2.3-rc.2",
+            "1.2.3-rc.2+build.2",
+            "1.2.3+build.2",
+        ]
+
+        class MockResponse:
+            def __init__(self):
+                self.status = 200
+                self.version = None
+
+            async def json(self):
+                return {"version": self.version}
+
+        mock_response = MockResponse()
+        self.client._session = Mock()
+
+        @asynccontextmanager
+        async def get_mock(url: str) -> AsyncIterator[MockResponse]:
+            yield mock_response
+
+        self.client._session.get = get_mock
+
+        # Execution
+        for version in versions:
+            mock_response.version = version
+            result = await self.client.version()
+
+        # Assertion
+            self.assertEqual(result.major, 1)
+            self.assertEqual(result.minor, 2)
+            self.assertEqual(result.patch, 3)
+
+            if version.endswith('-rc.2+build.2'):
+                self.assertEqual(result.metadata, 'build.2')
+                self.assertEqual(result.prerelease, 'rc.2')
+            elif version.endswith('+build.2'):
+                self.assertEqual(result.metadata, 'build.2')
+                self.assertIsNone(result.prerelease)
+            elif version.endswith('-rc.2'):
+                self.assertIsNone(result.metadata)
+                self.assertEqual(result.prerelease, 'rc.2')
