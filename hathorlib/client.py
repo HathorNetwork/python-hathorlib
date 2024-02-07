@@ -2,8 +2,8 @@
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-import re
 import json
+import re
 from typing import Any, Dict, List, NamedTuple, Optional, cast
 from urllib.parse import urljoin
 
@@ -106,14 +106,14 @@ class HathorClient:
             else:
                 raise RuntimeError(f'Cannot parse version {version}')
 
-    async def health(self):
+    async def health(self) -> Dict[str, Any]:
         """Return the health information of the backend."""
         assert self._session is not None
 
         async with self._session.get(self._get_url('health')) as resp:
             data = await resp.text()
             try:
-                parsed_json = json.loads(data)
+                parsed_json: Dict[str, Any] = json.loads(data)
             except json.JSONDecodeError:
                 raise RuntimeError('Cannot parse health response: {}'.format(data))
             return parsed_json
