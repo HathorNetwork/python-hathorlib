@@ -13,7 +13,9 @@
 # limitations under the License.
 
 from hathorlib.nanocontracts.nanocontract import NanoContract
+from hathorlib.nanocontracts.on_chain_blueprint import OnChainBlueprint
 
 __all__ = [
     'NanoContract',
+    'OnChainBlueprint',
 ]
