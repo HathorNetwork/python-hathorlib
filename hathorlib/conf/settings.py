@@ -50,3 +50,9 @@ class HathorSettings(NamedTuple):
 
     # Maximum number of tx outputs of Data Script type
     MAX_DATA_SCRIPT_OUTPUTS: int = 25
+
+    # Max length in bytes allowed for on-chain blueprint code after decompression, 240KB (not KiB)
+    NC_ON_CHAIN_BLUEPRINT_CODE_MAX_SIZE_UNCOMPRESSED: int = 240_000
+
+    # Max length in bytes allowed for on-chain blueprint code inside the transaction, 24KB (not KiB)
+    NC_ON_CHAIN_BLUEPRINT_CODE_MAX_SIZE_COMPRESSED: int = 24_000
