@@ -42,9 +42,14 @@ class Block(BaseTransaction):
         blc = cls()
         buf = blc.get_fields_from_struct(struct_bytes)
 
-        blc.nonce = int.from_bytes(buf, byteorder='big')
-        if len(buf) != cls.SERIALIZATION_NONCE_SIZE:
+        if len(buf) < cls.SERIALIZATION_NONCE_SIZE:
             raise ValueError('Invalid sequence of bytes')
+
+        blc.nonce = int.from_bytes(buf[:cls.SERIALIZATION_NONCE_SIZE], byteorder='big')
+        buf = buf[cls.SERIALIZATION_NONCE_SIZE:]
+
+        while buf:
+            buf = blc.get_header_from_bytes(buf)
 
         blc.hash = blc.calculate_hash()
 

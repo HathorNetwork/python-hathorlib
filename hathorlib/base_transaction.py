@@ -19,6 +19,7 @@ from hathorlib.conf import HathorSettings
 from hathorlib.exceptions import InvalidOutputValue, WeightError
 from hathorlib.scripts import P2PKH, DataScript, MultiSig, parse_address_script
 from hathorlib.utils import int_to_bytes, unpack, unpack_len
+from hathorlib.vertex_parser import VertexParser
 
 settings = HathorSettings()
 
@@ -81,14 +82,14 @@ class TxVersion(IntEnum):
 
     def get_cls(self) -> Type['BaseTransaction']:
         from hathorlib import Block, TokenCreationTransaction, Transaction
-        from hathorlib.nanocontracts.nanocontract import NanoContract
+        from hathorlib.nanocontracts.nanocontract import DeprecatedNanoContract
         from hathorlib.nanocontracts.on_chain_blueprint import OnChainBlueprint
 
         cls_map: Dict[TxVersion, Type[BaseTransaction]] = {
             TxVersion.REGULAR_BLOCK: Block,
             TxVersion.REGULAR_TRANSACTION: Transaction,
             TxVersion.TOKEN_CREATION_TRANSACTION: TokenCreationTransaction,
-            TxVersion.NANO_CONTRACT: NanoContract,
+            TxVersion.NANO_CONTRACT: DeprecatedNanoContract,
             TxVersion.ON_CHAIN_BLUEPRINT: OnChainBlueprint,
         }
 
@@ -103,6 +104,10 @@ class TxVersion(IntEnum):
 class BaseTransaction(ABC):
     """Hathor base transaction"""
 
+    __slots__ = (
+        'version', 'signal_bits', 'weight', 'timestamp', 'nonce', 'inputs', 'outputs', 'parents', 'hash', 'headers'
+    )
+
     # Even though nonce is serialized with different sizes for tx and blocks
     # the same size is used for hashes to enable mining algorithm compatibility
     SERIALIZATION_NONCE_SIZE: ClassVar[int]
@@ -116,6 +121,7 @@ class BaseTransaction(ABC):
     signal_bits: int
 
     def __init__(self) -> None:
+        from hathorlib.headers import VertexBaseHeader
         self.nonce: int = 0
         self.timestamp: int = 0
         self.signal_bits: int = 0
@@ -125,6 +131,7 @@ class BaseTransaction(ABC):
         self.outputs: List['TxOutput'] = []
         self.parents: List[bytes] = []
         self.hash: bytes = b''
+        self.headers: list[VertexBaseHeader] = []
 
     @property
     @abstractmethod
@@ -135,6 +142,10 @@ class BaseTransaction(ABC):
     @abstractmethod
     def is_transaction(self) -> bool:
         raise NotImplementedError
+
+    def is_nano_contract(self) -> bool:
+        """Return True if this transaction is a nano contract or not."""
+        return False
 
     def _get_formatted_fields_dict(self, short: bool = True) -> Dict[str, str]:
         """ Used internally on __repr__ and __str__, returns a dict of `field_name: formatted_value`.
@@ -185,6 +196,21 @@ class BaseTransaction(ABC):
         buf = self.get_funds_fields_from_struct(struct_bytes)
         buf = self.get_graph_fields_from_struct(buf)
         return buf
+
+    def get_header_from_bytes(self, buf: bytes) -> bytes:
+        """Parse bytes and return the next header in buffer."""
+        if len(self.headers) >= self.get_maximum_number_of_headers():
+            raise ValueError('too many headers')
+
+        header_type = buf[:1]
+        header_class = VertexParser.get_header_parser(header_type)
+        header, buf = header_class.deserialize(self, buf)
+        self.headers.append(header)
+        return buf
+
+    def get_maximum_number_of_headers(self) -> int:
+        """Return the maximum number of headers for this vertex."""
+        return 1
 
     @classmethod
     @abstractmethod
@@ -294,6 +320,10 @@ class BaseTransaction(ABC):
             struct_bytes += parent
         return struct_bytes
 
+    def get_headers_struct(self) -> bytes:
+        """Return the serialization of the headers only."""
+        return b''.join(h.serialize() for h in self.headers)
+
     def get_struct_without_nonce(self) -> bytes:
         """Return a partial serialization of the transaction, without including the nonce field
 
@@ -321,6 +351,7 @@ class BaseTransaction(ABC):
         """
         struct_bytes = self.get_struct_without_nonce()
         struct_bytes += self.get_struct_nonce()
+        struct_bytes += self.get_headers_struct()
         return struct_bytes
 
     def verify_pow(self, override_weight: Optional[float] = None) -> bool:
@@ -355,13 +386,22 @@ class BaseTransaction(ABC):
         graph_hash.update(self.get_graph_struct())
         return graph_hash.digest()
 
-    def get_header_without_nonce(self) -> bytes:
+    def get_headers_hash(self) -> bytes:
+        """Return the sha256 of the headers of the transaction."""
+        if not self.headers:
+            return b''
+
+        h = hashlib.sha256()
+        h.update(self.get_headers_struct())
+        return h.digest()
+
+    def get_mining_header_without_nonce(self) -> bytes:
         """Return the transaction header without the nonce
 
         :return: transaction header without the nonce
         :rtype: bytes
         """
-        return self.get_funds_hash() + self.get_graph_hash()
+        return self.get_funds_hash() + self.get_graph_hash() + self.get_headers_hash()
 
     def calculate_hash1(self) -> HASH:
         """Return the sha256 of the transaction without including the `nonce`
@@ -370,7 +410,7 @@ class BaseTransaction(ABC):
         :rtype: :py:class:`_hashlib.HASH`
         """
         calculate_hash1 = hashlib.sha256()
-        calculate_hash1.update(self.get_header_without_nonce())
+        calculate_hash1.update(self.get_mining_header_without_nonce())
         return calculate_hash1
 
     def calculate_hash2(self, part1: HASH) -> bytes:
