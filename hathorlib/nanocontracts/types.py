@@ -12,10 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from hathorlib.nanocontracts.nanocontract import DeprecatedNanoContract
-from hathorlib.nanocontracts.on_chain_blueprint import OnChainBlueprint
+from __future__ import annotations
 
-__all__ = [
-    'DeprecatedNanoContract',
-    'OnChainBlueprint',
-]
+from enum import Enum, unique
+
+from hathorlib.utils import bytes_to_int, int_to_bytes
+
+
+@unique
+class NCActionType(Enum):
+    """Types of interactions a transaction might have with a contract."""
+    DEPOSIT = 1
+    WITHDRAWAL = 2
+
+    def __str__(self) -> str:
+        return self.name.lower()
+
+    def to_bytes(self) -> bytes:
+        return int_to_bytes(number=self.value, size=1)
+
+    @staticmethod
+    def from_bytes(data: bytes) -> NCActionType:
+        return NCActionType(bytes_to_int(data))

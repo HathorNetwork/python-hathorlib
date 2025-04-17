@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from hathorlib.nanocontracts.nanocontract import DeprecatedNanoContract
-from hathorlib.nanocontracts.on_chain_blueprint import OnChainBlueprint
+from enum import Enum, unique
 
-__all__ = [
-    'DeprecatedNanoContract',
-    'OnChainBlueprint',
-]
+
+@unique
+class VertexHeaderId(Enum):
+    NANO_HEADER = b'\x10'

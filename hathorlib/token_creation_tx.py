@@ -136,6 +136,9 @@ class TokenCreationTransaction(Transaction):
 
         struct_bytes += self.serialize_token_info()
 
+        for header in self.headers:
+            struct_bytes += header.get_sighash_bytes()
+
         return struct_bytes
 
     def serialize_token_info(self) -> bytes:
