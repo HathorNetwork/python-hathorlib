@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from hathorlib.nanocontracts.nanocontract import DeprecatedNanoContract
-from hathorlib.nanocontracts.on_chain_blueprint import OnChainBlueprint
+from hathorlib.headers.base import VertexBaseHeader
+from hathorlib.headers.nano_header import NC_INITIALIZE_METHOD, NanoHeader
+from hathorlib.headers.types import VertexHeaderId
 
 __all__ = [
-    'DeprecatedNanoContract',
-    'OnChainBlueprint',
+    'VertexBaseHeader',
+    'VertexHeaderId',
+    'NanoHeader',
+    'NC_INITIALIZE_METHOD',
 ]

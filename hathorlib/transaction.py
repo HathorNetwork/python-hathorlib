@@ -5,15 +5,20 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
 
+from __future__ import annotations
+
 import struct
 from collections import namedtuple
 from struct import pack
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from hathorlib.base_transaction import TX_HASH_SIZE, BaseTransaction, TxInput, TxOutput
 from hathorlib.conf import HathorSettings
 from hathorlib.exceptions import InvalidOutputValue, InvalidToken
 from hathorlib.utils import unpack, unpack_len
+
+if TYPE_CHECKING:
+    from hathorlib.headers import NanoHeader
 
 settings = HathorSettings()
 
@@ -27,6 +32,7 @@ TokenInfo = namedtuple('TokenInfo', 'amount can_mint can_melt')
 
 
 class Transaction(BaseTransaction):
+    __slots__ = ('tokens',)
 
     SERIALIZATION_NONCE_SIZE = 4
 
@@ -48,16 +54,35 @@ class Transaction(BaseTransaction):
         """Returns true if this is a transaction"""
         return True
 
+    def is_nano_contract(self) -> bool:
+        try:
+            self.get_nano_header()
+        except ValueError:
+            return False
+        else:
+            return True
+
+    def get_nano_header(self) -> NanoHeader:
+        """Return the NanoHeader or raise ValueError."""
+        from hathorlib.headers import NanoHeader
+        for header in self.headers:
+            if isinstance(header, NanoHeader):
+                return header
+        raise ValueError('nano header not found')
+
     @classmethod
     def create_from_struct(cls, struct_bytes: bytes) -> 'Transaction':
         try:
             tx = cls()
             buf = tx.get_fields_from_struct(struct_bytes)
 
-            if len(buf) != cls.SERIALIZATION_NONCE_SIZE:
+            if len(buf) < cls.SERIALIZATION_NONCE_SIZE:
                 raise ValueError('Invalid sequence of bytes')
 
             [tx.nonce, ], buf = unpack('!I', buf)
+
+            while buf:
+                buf = tx.get_header_from_bytes(buf)
         except struct.error:
             raise ValueError('Invalid sequence of bytes')
 
@@ -149,6 +174,9 @@ class Transaction(BaseTransaction):
 
         for tx_output in self.outputs:
             struct_bytes += bytes(tx_output)
+
+        for header in self.headers:
+            struct_bytes += header.get_sighash_bytes()
 
         ret = bytes(struct_bytes)
         return ret
