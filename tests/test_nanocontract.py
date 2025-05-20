@@ -29,12 +29,10 @@ class NCNanoContractTestCase(unittest.TestCase):
             nc_method='initialize',
             # ['string', 1]
             nc_args_bytes=b'\x00\x06string\x00\x04\x00\x00\x00\x01',
-            nc_pubkey=b'\x020\xc1K\xb8\xc4fO>\xb7\x96a\xdeN\x96\x92\xcd\x1c\xa8\xa3]'
-                      b'\xfeZ\xf7}\x95\x99\xb0\x1cBE\xc8\x90',
-            nc_signature=b'0F\x02!\x00\x9c\xfey\xb1C\x9eAJ\x9eU~\xe3\xaf\xfcQ' \
-                         b'\xf6\xf0`g\x1b0\xb6\xca\x1b\xed\x83:N\xa0\x98\xd2' \
-                         b'\xdf\x02!\x00\xbe\xf85\xf6O`\xfed`Ip\xe2a\xc4\x03vv' \
-                         b'\xec\x94\ny?\xde\x90\xc3\x12\x9c\xd8\xdd\xd8\xe5\r'
+            nc_address=bytes.fromhex('280ff02e7049b7b15356a1d8108d2d8cda79b65ddf84403239'),
+            nc_script=bytes.fromhex('47304502206db7372dde8dfaac7364d6cd13517e3fc0d75fea09bc3c6a425e5607fcec3f93022100a'
+                                    'aadfbdab62eaa65e2a6031ff04fccd283e9d653a80a858cb97dd101e5c689ae2102d6c0adc88c4e80'
+                                    '8f1aa1ee0fbce19f082613c0603eeb90764702f859b55c615b')
         )
         nc.headers = [nano_header]
         return nc
@@ -47,10 +45,12 @@ class NCNanoContractTestCase(unittest.TestCase):
         self.assertEqual(nc_bytes, bytes(nc2))
         nano_header1 = nc.get_nano_header()
         nano_header2 = nc2.get_nano_header()
+        assert isinstance(nano_header1, NanoHeader)
+        assert isinstance(nano_header2, NanoHeader)
 
         self.assertEqual(nano_header1.nc_id, nano_header2.nc_id)
         self.assertEqual(nano_header1.nc_method, nano_header2.nc_method)
         self.assertEqual(nano_header1.nc_args_bytes, nano_header2.nc_args_bytes)
-        self.assertEqual(nano_header1.nc_pubkey, nano_header2.nc_pubkey)
-        self.assertEqual(nano_header1.nc_signature, nano_header2.nc_signature)
+        self.assertEqual(nano_header1.nc_address, nano_header2.nc_address)
+        self.assertEqual(nano_header1.nc_script, nano_header2.nc_script)
         self.assertEqual(nano_header1.nc_actions, nano_header2.nc_actions)
