@@ -18,7 +18,7 @@ from hathorlib.exceptions import InvalidOutputValue, InvalidToken
 from hathorlib.utils import unpack, unpack_len
 
 if TYPE_CHECKING:
-    from hathorlib.headers import NanoHeader
+    from hathorlib.headers import DeprecatedNanoHeader, NanoHeader
 
 settings = HathorSettings()
 
@@ -62,11 +62,11 @@ class Transaction(BaseTransaction):
         else:
             return True
 
-    def get_nano_header(self) -> NanoHeader:
+    def get_nano_header(self) -> NanoHeader | DeprecatedNanoHeader:
         """Return the NanoHeader or raise ValueError."""
-        from hathorlib.headers import NanoHeader
+        from hathorlib.headers import DeprecatedNanoHeader, NanoHeader
         for header in self.headers:
-            if isinstance(header, NanoHeader):
+            if isinstance(header, (NanoHeader, DeprecatedNanoHeader)):
                 return header
         raise ValueError('nano header not found')
 
