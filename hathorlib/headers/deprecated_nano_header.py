@@ -20,27 +20,18 @@ from typing import TYPE_CHECKING
 
 from hathorlib.headers.base import VertexBaseHeader
 from hathorlib.headers.types import VertexHeaderId
-from hathorlib.nanocontracts import DeprecatedNanoContract
-from hathorlib.nanocontracts.types import NCActionType
 from hathorlib.utils import int_to_bytes, unpack, unpack_len
 
 if TYPE_CHECKING:
     from hathorlib.base_transaction import BaseTransaction
+    from hathorlib.headers.nano_header import NanoHeader, NanoHeaderAction
+
 
 NC_VERSION = 1
-NC_INITIALIZE_METHOD = 'initialize'
-ADDRESS_LEN_BYTES = 25
 
 
 @dataclass(frozen=True)
-class NanoHeaderAction:
-    type: NCActionType
-    token_index: int
-    amount: int
-
-
-@dataclass(frozen=True)
-class NanoHeader(VertexBaseHeader):
+class DeprecatedNanoHeader(VertexBaseHeader):
     tx: BaseTransaction
 
     # nc_id equals to the blueprint_id when a Nano Contract is being created.
@@ -55,27 +46,14 @@ class NanoHeader(VertexBaseHeader):
 
     nc_actions: list[NanoHeaderAction]
 
-    # Address and script with signature(s) of the transaction owner(s)/caller(s). Supports P2PKH and P2SH.
-    nc_address: bytes
-    nc_script: bytes
+    # Pubkey and signature of the transaction owner / caller.
+    nc_pubkey: bytes
+    nc_signature: bytes
 
     nc_version: int = NC_VERSION
 
     @classmethod
-    def _deserialize_action(cls, buf: bytes) -> tuple[NanoHeaderAction, bytes]:
-        from hathorlib.base_transaction import bytes_to_output_value
-        type_bytes, buf = buf[:1], buf[1:]
-        action_type = NCActionType.from_bytes(type_bytes)
-        (token_index,), buf = unpack('!B', buf)
-        amount, buf = bytes_to_output_value(buf)
-        return NanoHeaderAction(
-            type=action_type,
-            token_index=token_index,
-            amount=amount,
-        ), buf
-
-    @classmethod
-    def deserialize(cls, tx: BaseTransaction, buf: bytes) -> tuple[NanoHeader, bytes]:
+    def deserialize(cls, tx: BaseTransaction, buf: bytes) -> tuple[DeprecatedNanoHeader, bytes]:
         header_id, buf = buf[:1], buf[1:]
         assert header_id == VertexHeaderId.NANO_HEADER.value
         (nc_version,), buf = unpack('!B', buf)
@@ -89,15 +67,17 @@ class NanoHeader(VertexBaseHeader):
         nc_args_bytes, buf = unpack_len(nc_args_bytes_len, buf)
 
         nc_actions: list[NanoHeaderAction] = []
+        from hathorlib.nanocontracts import DeprecatedNanoContract
         if not isinstance(tx, DeprecatedNanoContract):
             (nc_actions_len,), buf = unpack('!B', buf)
             for _ in range(nc_actions_len):
-                action, buf = cls._deserialize_action(buf)
+                action, buf = NanoHeader._deserialize_action(buf)
                 nc_actions.append(action)
 
-        nc_address, buf = unpack_len(ADDRESS_LEN_BYTES, buf)
-        (nc_script_len,), buf = unpack('!H', buf)
-        nc_script, buf = unpack_len(nc_script_len, buf)
+        (nc_pubkey_len,), buf = unpack('!B', buf)
+        nc_pubkey, buf = unpack_len(nc_pubkey_len, buf)
+        (nc_signature_len,), buf = unpack('!B', buf)
+        nc_signature, buf = unpack_len(nc_signature_len, buf)
 
         decoded_nc_method = nc_method.decode('ascii')
 
@@ -108,19 +88,9 @@ class NanoHeader(VertexBaseHeader):
             nc_method=decoded_nc_method,
             nc_args_bytes=nc_args_bytes,
             nc_actions=nc_actions,
-            nc_address=nc_address,
-            nc_script=nc_script,
+            nc_pubkey=nc_pubkey,
+            nc_signature=nc_signature,
         ), bytes(buf)
-
-    @staticmethod
-    def _serialize_action(action: NanoHeaderAction) -> bytes:
-        from hathorlib.base_transaction import output_value_to_bytes
-        ret = [
-            action.type.to_bytes(),
-            int_to_bytes(action.token_index, 1),
-            output_value_to_bytes(action.amount),
-        ]
-        return b''.join(ret)
 
     def _serialize_without_header_id(self, *, skip_signature: bool) -> deque[bytes]:
         """Serialize the header with the option to skip the signature."""
@@ -134,15 +104,17 @@ class NanoHeader(VertexBaseHeader):
         ret.append(int_to_bytes(len(self.nc_args_bytes), 2))
         ret.append(self.nc_args_bytes)
 
+        from hathorlib.nanocontracts import DeprecatedNanoContract
         if not isinstance(self.tx, DeprecatedNanoContract):
             ret.append(int_to_bytes(len(self.nc_actions), 1))
             for action in self.nc_actions:
-                ret.append(self._serialize_action(action))
+                ret.append(NanoHeader._serialize_action(action))
 
-        ret.append(self.nc_address)
+        ret.append(int_to_bytes(len(self.nc_pubkey), 1))
+        ret.append(self.nc_pubkey)
         if not skip_signature:
-            ret.append(int_to_bytes(len(self.nc_script), 2))
-            ret.append(self.nc_script)
+            ret.append(int_to_bytes(len(self.nc_signature), 1))
+            ret.append(self.nc_signature)
         else:
             ret.append(int_to_bytes(0, 1))
         return ret

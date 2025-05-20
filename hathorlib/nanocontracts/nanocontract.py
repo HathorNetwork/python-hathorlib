@@ -42,9 +42,9 @@ class DeprecatedNanoContract(Transaction):
     ################################
 
     def get_funds_fields_from_struct(self, buf: bytes) -> bytes:
-        from hathorlib.headers import NanoHeader, VertexHeaderId
+        from hathorlib.headers import DeprecatedNanoHeader, VertexHeaderId
         buf = super().get_funds_fields_from_struct(buf)
-        nano_header, buf = NanoHeader.deserialize(self, VertexHeaderId.NANO_HEADER.value + buf)
+        nano_header, buf = DeprecatedNanoHeader.deserialize(self, VertexHeaderId.NANO_HEADER.value + buf)
         self.headers.append(nano_header)
         return buf
 

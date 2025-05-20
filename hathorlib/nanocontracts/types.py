@@ -24,6 +24,8 @@ class NCActionType(Enum):
     """Types of interactions a transaction might have with a contract."""
     DEPOSIT = 1
     WITHDRAWAL = 2
+    GRANT_AUTHORITY = 3
+    INVOKE_AUTHORITY = 4
 
     def __str__(self) -> str:
         return self.name.lower()
