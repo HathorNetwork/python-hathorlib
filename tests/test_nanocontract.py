@@ -18,6 +18,7 @@ class NCNanoContractTestCase(unittest.TestCase):
         nc.timestamp = 123456
         nano_header = NanoHeader(
             tx=nc,
+            nc_seqnum=123,
             nc_actions=[
                 NanoHeaderAction(
                     type=NCActionType.DEPOSIT,
@@ -48,7 +49,7 @@ class NCNanoContractTestCase(unittest.TestCase):
         assert isinstance(nano_header1, NanoHeader)
         assert isinstance(nano_header2, NanoHeader)
 
-        self.assertEqual(nano_header1.nc_version, nano_header2.nc_version)
+        self.assertEqual(nano_header1.nc_seqnum, nano_header2.nc_seqnum)
         self.assertEqual(nano_header1.nc_id, nano_header2.nc_id)
         self.assertEqual(nano_header1.nc_method, nano_header2.nc_method)
         self.assertEqual(nano_header1.nc_args_bytes, nano_header2.nc_args_bytes)
@@ -65,7 +66,7 @@ class NCNanoContractTestCase(unittest.TestCase):
         assert isinstance(deserialized, NanoHeader)
 
         assert len(buf) == 0
-        assert deserialized.nc_version == nano_header.nc_version
+        assert deserialized.nc_seqnum == nano_header.nc_seqnum
         assert deserialized.nc_id == nano_header.nc_id
         assert deserialized.nc_method == nano_header.nc_method
         assert deserialized.nc_args_bytes == nano_header.nc_args_bytes
