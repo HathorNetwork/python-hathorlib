@@ -22,14 +22,15 @@ from hathorlib.headers.base import VertexBaseHeader
 from hathorlib.headers.types import VertexHeaderId
 from hathorlib.nanocontracts import DeprecatedNanoContract
 from hathorlib.nanocontracts.types import NCActionType
-from hathorlib.utils import int_to_bytes, unpack, unpack_len
+from hathorlib.utils import decode_unsigned, encode_unsigned, int_to_bytes, unpack, unpack_len
 
 if TYPE_CHECKING:
     from hathorlib.base_transaction import BaseTransaction
 
-NC_VERSION = 1
 NC_INITIALIZE_METHOD = 'initialize'
 ADDRESS_LEN_BYTES = 25
+ADDRESS_SEQNUM_SIZE: int = 8  # bytes
+_NC_SCRIPT_LEN_MAX_BYTES: int = 2
 
 
 @dataclass(frozen=True)
@@ -42,6 +43,9 @@ class NanoHeaderAction:
 @dataclass(frozen=True)
 class NanoHeader(VertexBaseHeader):
     tx: BaseTransaction
+
+    # Sequence number for the caller.
+    nc_seqnum: int
 
     # nc_id equals to the blueprint_id when a Nano Contract is being created.
     # nc_id equals to the nanocontract_id when a method is being called.
@@ -58,8 +62,6 @@ class NanoHeader(VertexBaseHeader):
     # Address and script with signature(s) of the transaction owner(s)/caller(s). Supports P2PKH and P2SH.
     nc_address: bytes
     nc_script: bytes
-
-    nc_version: int = NC_VERSION
 
     @classmethod
     def _deserialize_action(cls, buf: bytes) -> tuple[NanoHeaderAction, bytes]:
@@ -78,11 +80,9 @@ class NanoHeader(VertexBaseHeader):
     def deserialize(cls, tx: BaseTransaction, buf: bytes) -> tuple[NanoHeader, bytes]:
         header_id, buf = buf[:1], buf[1:]
         assert header_id == VertexHeaderId.NANO_HEADER.value
-        (nc_version,), buf = unpack('!B', buf)
-        if nc_version != NC_VERSION:
-            raise ValueError('unknown nanocontract version: {}'.format(nc_version))
 
         nc_id, buf = unpack_len(32, buf)
+        nc_seqnum, buf = decode_unsigned(buf, max_bytes=ADDRESS_SEQNUM_SIZE)
         (nc_method_len,), buf = unpack('!B', buf)
         nc_method, buf = unpack_len(nc_method_len, buf)
         (nc_args_bytes_len,), buf = unpack('!H', buf)
@@ -96,14 +96,14 @@ class NanoHeader(VertexBaseHeader):
                 nc_actions.append(action)
 
         nc_address, buf = unpack_len(ADDRESS_LEN_BYTES, buf)
-        (nc_script_len,), buf = unpack('!H', buf)
+        nc_script_len, buf = decode_unsigned(buf, max_bytes=_NC_SCRIPT_LEN_MAX_BYTES)
         nc_script, buf = unpack_len(nc_script_len, buf)
 
         decoded_nc_method = nc_method.decode('ascii')
 
         return cls(
             tx=tx,
-            nc_version=nc_version,
+            nc_seqnum=nc_seqnum,
             nc_id=nc_id,
             nc_method=decoded_nc_method,
             nc_args_bytes=nc_args_bytes,
@@ -127,8 +127,8 @@ class NanoHeader(VertexBaseHeader):
         encoded_method = self.nc_method.encode('ascii')
 
         ret: deque[bytes] = deque()
-        ret.append(int_to_bytes(NC_VERSION, 1))
         ret.append(self.nc_id)
+        ret.append(encode_unsigned(self.nc_seqnum, max_bytes=ADDRESS_SEQNUM_SIZE))
         ret.append(int_to_bytes(len(encoded_method), 1))
         ret.append(encoded_method)
         ret.append(int_to_bytes(len(self.nc_args_bytes), 2))
@@ -141,10 +141,10 @@ class NanoHeader(VertexBaseHeader):
 
         ret.append(self.nc_address)
         if not skip_signature:
-            ret.append(int_to_bytes(len(self.nc_script), 2))
+            ret.append(encode_unsigned(len(self.nc_script), max_bytes=_NC_SCRIPT_LEN_MAX_BYTES))
             ret.append(self.nc_script)
         else:
-            ret.append(int_to_bytes(0, 2))
+            ret.append(encode_unsigned(0, max_bytes=_NC_SCRIPT_LEN_MAX_BYTES))
         return ret
 
     def serialize(self) -> bytes:
