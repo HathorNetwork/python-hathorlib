@@ -19,7 +19,7 @@ class OnChainBlueprintTestCase(unittest.TestCase):
                            b'\xf6\xf0`g\x1b0\xb6\xca\x1b\xed\x83:N\xa0\x98\xd2'   \
                            b'\xdf\x02!\x00\xbe\xf85\xf6O`\xfed`Ip\xe2a\xc4\x03vv' \
                            b'\xec\x94\ny?\xde\x90\xc3\x12\x9c\xd8\xdd\xd8\xe5\r'
-        code = Code(CodeKind.PYTHON_GZIP, b'')
+        code = Code(CodeKind.PYTHON_ZLIB, b'')
         ocb.code = code
         return ocb
 

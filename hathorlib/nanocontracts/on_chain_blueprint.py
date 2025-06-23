@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
+from enum import IntEnum, unique
 from typing import NamedTuple
 
 from hathorlib.conf import HathorSettings
@@ -25,14 +25,15 @@ settings = HathorSettings()
 ON_CHAIN_BLUEPRINT_VERSION: int = 1
 
 
-class CodeKind(Enum):
+@unique
+class CodeKind(IntEnum):
     """ Represents what type of code and format is being used, to allow new code/compression types in the future.
     """
 
-    PYTHON_GZIP = 'python+gzip'
+    PYTHON_ZLIB = 1
 
     def __bytes__(self) -> bytes:
-        return self.value.encode()
+        return int_to_bytes(number=self.value, size=1)
 
 
 class Code(NamedTuple):
@@ -47,11 +48,10 @@ class Code(NamedTuple):
 
     def __bytes__(self) -> bytes:
         # Code serialization format: [kind:variable bytes][null byte][data:variable bytes]
-        if self.kind is not CodeKind.PYTHON_GZIP:
+        if self.kind is not CodeKind.PYTHON_ZLIB:
             raise ValueError('Invalid code kind value')
         buf = bytearray()
         buf.extend(bytes(self.kind))
-        buf.append(0)
         buf.extend(self.data)
         return bytes(buf)
 
@@ -63,11 +63,10 @@ class Code(NamedTuple):
         check that.
         """
         data = bytearray(data)
-        cut_at = data.index(0)
-        kind = CodeKind(data[0:cut_at].decode())
-        if kind is not CodeKind.PYTHON_GZIP:
+        kind = CodeKind(data[0])
+        if kind is not CodeKind.PYTHON_ZLIB:
             raise ValueError('Code kind not supported')
-        compressed_code = data[cut_at + 1:]
+        compressed_code = data[1:]
         return cls(kind, compressed_code)
 
 
@@ -83,7 +82,7 @@ class OnChainBlueprint(Transaction):
         self.nc_pubkey: bytes = b''
         self.nc_signature: bytes = b''
 
-        self.code: Code = Code(CodeKind.PYTHON_GZIP, b'')
+        self.code: Code = Code(CodeKind.PYTHON_ZLIB, b'')
 
     def serialize_code(self) -> bytes:
         """Serialization of self.code, to be used for the serialization of this transaction type."""
