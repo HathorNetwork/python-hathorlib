@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
+from enum import IntEnum
 from struct import error as StructError, pack
 from typing import Tuple
 
@@ -32,9 +32,13 @@ _FUNDS_FORMAT_STRING = '!BBBB'
 # Signal bist (B), version (B), inputs len (B), outputs len (B)
 _SIGHASH_ALL_FORMAT_STRING = '!BBBB'
 
+
 # used when (de)serializing token information
-# version 1 expects only token name and symbol
-TOKEN_INFO_VERSION = 1
+# version 1 is the default behavior
+class TokenVersion(IntEnum):
+    NATIVE = 0
+    DEPOSIT = 1
+    FEE = 2
 
 
 class TokenCreationTransaction(Transaction):
@@ -43,11 +47,19 @@ class TokenCreationTransaction(Transaction):
         # for this special tx, its own hash is used as the created token uid. We're artificially
         # creating the tokens list here
         self.tokens = []
+        self.token_version: TokenVersion = TokenVersion.DEPOSIT
 
     def __str__(self) -> str:
-        return ('TokenCreationTransaction(nonce=%d, timestamp=%s, version=%s, weight=%f, hash=%s, '
-                'token_name=%s, token_symbol=%s)' % (self.nonce, self.timestamp, int(self.version),
-                                                     self.weight, self.hash_hex, self.token_name, self.token_symbol))
+        return (
+            f'TokenCreationTransaction(nonce={self.nonce}, '
+            f'timestamp={self.timestamp}, '
+            f'version={int(self.version)}, '
+            f'weight={self.weight:.6f}, '
+            f'hash={self.hash_hex}, '
+            f'token_name={self.token_name}, '
+            f'token_symbol={self.token_symbol}, '
+            f'token_version={self.token_version})'
+        )
 
     def update_hash(self) -> None:
         """ When we update the hash, we also have to update the tokens uid list
@@ -78,7 +90,12 @@ class TokenCreationTransaction(Transaction):
             self.outputs.append(txout)
 
         # token name and symbol
-        self.token_name, self.token_symbol, buf = TokenCreationTransaction.deserialize_token_info(buf)
+        (
+            self.token_name,
+            self.token_symbol,
+            self.token_version,
+            buf
+        ) = TokenCreationTransaction.deserialize_token_info(buf)
 
         return buf
 
@@ -148,23 +165,27 @@ class TokenCreationTransaction(Transaction):
         encoded_symbol = self.token_symbol.encode('utf-8')
 
         ret = b''
-        ret += int_to_bytes(TOKEN_INFO_VERSION, 1)
+        ret += int_to_bytes(self.token_version, 1)
         ret += int_to_bytes(len(encoded_name), 1)
         ret += encoded_name
         ret += int_to_bytes(len(encoded_symbol), 1)
         ret += encoded_symbol
+
         return ret
 
     @classmethod
-    def deserialize_token_info(cls, buf: bytes) -> Tuple[str, str, bytes]:
-        """ Gets the token name and symbol from serialized format
+    def deserialize_token_info(cls, buf: bytes) -> Tuple[str, str, TokenVersion, bytes]:
+        """ Gets the token name, symbol and version from serialized format
         """
-        (token_info_version,), buf = unpack('!B', buf)
-        if token_info_version != TOKEN_INFO_VERSION:
-            raise ValueError('unknown token info version: {}'.format(token_info_version))
+        (raw_token_version,), buf = unpack('!B', buf)
+        try:
+            token_version = TokenVersion(raw_token_version)
+        except ValueError:
+            raise ValueError('unknown token version: {}'.format(raw_token_version))
 
         (name_len,), buf = unpack('!B', buf)
         name, buf = unpack_len(name_len, buf)
+
         (symbol_len,), buf = unpack('!B', buf)
         symbol, buf = unpack_len(symbol_len, buf)
 
@@ -172,7 +193,7 @@ class TokenCreationTransaction(Transaction):
         decoded_name = decode_string_utf8(name, 'Token name')
         decoded_symbol = decode_string_utf8(symbol, 'Token symbol')
 
-        return decoded_name, decoded_symbol, buf
+        return decoded_name, decoded_symbol, token_version, buf
 
     def verify_token_info(self) -> None:
         """ Validates token info
@@ -189,6 +210,10 @@ class TokenCreationTransaction(Transaction):
             raise TransactionDataError('Invalid token name ({})'.format(self.token_name))
         if clean_token_string(self.token_symbol) == clean_token_string(settings.HATHOR_TOKEN_SYMBOL):
             raise TransactionDataError('Invalid token symbol ({})'.format(self.token_symbol))
+
+        # Can't create the token with NATIVE version
+        if self.token_version == TokenVersion.NATIVE:
+            raise TransactionDataError('Invalid token version ({})'.format(self.token_version))
 
     def is_nft_creation_standard(self) -> bool:
         """Returns True if it's a standard NFT creation transaction"""
