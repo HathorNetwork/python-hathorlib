@@ -147,6 +147,10 @@ class BaseTransaction(ABC):
         """Return True if this transaction is a nano contract or not."""
         return False
 
+    def has_fees(self) -> bool:
+        """Return True if this transaction has fees or not."""
+        return False
+
     def _get_formatted_fields_dict(self, short: bool = True) -> Dict[str, str]:
         """ Used internally on __repr__ and __str__, returns a dict of `field_name: formatted_value`.
         """

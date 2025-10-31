@@ -26,9 +26,10 @@ class VertexParser:
     @staticmethod
     def get_supported_headers() -> dict[VertexHeaderId, type[VertexBaseHeader]]:
         """Return a dict of supported headers."""
-        from hathorlib.headers import NanoHeader, VertexHeaderId
+        from hathorlib.headers import FeeHeader, NanoHeader, VertexHeaderId
         return {
             VertexHeaderId.NANO_HEADER: NanoHeader,
+            VertexHeaderId.FEE_HEADER: FeeHeader,
         }
 
     @staticmethod

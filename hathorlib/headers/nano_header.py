@@ -20,12 +20,11 @@ from typing import TYPE_CHECKING
 
 from hathorlib.headers.base import VertexBaseHeader
 from hathorlib.headers.types import VertexHeaderId
-from hathorlib.nanocontracts import DeprecatedNanoContract
-from hathorlib.nanocontracts.types import NCActionType
 from hathorlib.utils import decode_unsigned, encode_unsigned, int_to_bytes, unpack, unpack_len
 
 if TYPE_CHECKING:
     from hathorlib.base_transaction import BaseTransaction
+    from hathorlib.nanocontracts.types import NCActionType
 
 NC_INITIALIZE_METHOD = 'initialize'
 ADDRESS_LEN_BYTES = 25
@@ -35,7 +34,7 @@ _NC_SCRIPT_LEN_MAX_BYTES: int = 2
 
 @dataclass(frozen=True)
 class NanoHeaderAction:
-    type: NCActionType
+    type: 'NCActionType'
     token_index: int
     amount: int
 
@@ -66,6 +65,8 @@ class NanoHeader(VertexBaseHeader):
     @classmethod
     def _deserialize_action(cls, buf: bytes) -> tuple[NanoHeaderAction, bytes]:
         from hathorlib.base_transaction import bytes_to_output_value
+        from hathorlib.nanocontracts.types import NCActionType
+
         type_bytes, buf = buf[:1], buf[1:]
         action_type = NCActionType.from_bytes(type_bytes)
         (token_index,), buf = unpack('!B', buf)
@@ -78,6 +79,8 @@ class NanoHeader(VertexBaseHeader):
 
     @classmethod
     def deserialize(cls, tx: BaseTransaction, buf: bytes) -> tuple[NanoHeader, bytes]:
+        from hathorlib.nanocontracts import DeprecatedNanoContract
+
         header_id, buf = buf[:1], buf[1:]
         assert header_id == VertexHeaderId.NANO_HEADER.value
 
@@ -124,6 +127,8 @@ class NanoHeader(VertexBaseHeader):
 
     def _serialize_without_header_id(self, *, skip_signature: bool) -> deque[bytes]:
         """Serialize the header with the option to skip the signature."""
+        from hathorlib.nanocontracts import DeprecatedNanoContract
+
         encoded_method = self.nc_method.encode('ascii')
 
         ret: deque[bytes] = deque()

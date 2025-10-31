@@ -10,15 +10,18 @@ from __future__ import annotations
 import struct
 from collections import namedtuple
 from struct import pack
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, TypeVar
 
 from hathorlib.base_transaction import TX_HASH_SIZE, BaseTransaction, TxInput, TxOutput
 from hathorlib.conf import HathorSettings
 from hathorlib.exceptions import InvalidOutputValue, InvalidToken
+from hathorlib.headers import VertexBaseHeader
 from hathorlib.utils import unpack, unpack_len
 
 if TYPE_CHECKING:
-    from hathorlib.headers import DeprecatedNanoHeader, NanoHeader
+    from hathorlib.headers import FeeHeader, NanoHeader
+
+T = TypeVar('T', bound=VertexBaseHeader)
 
 settings = HathorSettings()
 
@@ -62,13 +65,31 @@ class Transaction(BaseTransaction):
         else:
             return True
 
-    def get_nano_header(self) -> NanoHeader | DeprecatedNanoHeader:
+    def has_fees(self) -> bool:
+        """Returns true if this transaction has a fee header"""
+        try:
+            self.get_fee_header()
+        except ValueError:
+            return False
+        else:
+            return True
+
+    def get_nano_header(self) -> NanoHeader:
+        from hathorlib.headers import NanoHeader
         """Return the NanoHeader or raise ValueError."""
-        from hathorlib.headers import DeprecatedNanoHeader, NanoHeader
+        return self._get_header(NanoHeader)
+
+    def get_fee_header(self) -> FeeHeader:
+        from hathorlib.headers import FeeHeader
+        """Return the FeeHeader or raise ValueError."""
+        return self._get_header(FeeHeader)
+
+    def _get_header(self, header_type: type[T]) -> T:
+        """Return the header of the given type or raise ValueError."""
         for header in self.headers:
-            if isinstance(header, (NanoHeader, DeprecatedNanoHeader)):
+            if isinstance(header, header_type):
                 return header
-        raise ValueError('nano header not found')
+        raise ValueError(f'{header_type.__name__.lower()} not found')
 
     @classmethod
     def create_from_struct(cls, struct_bytes: bytes) -> 'Transaction':
