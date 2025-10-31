@@ -107,22 +107,19 @@ class HathorCommonsTestCase(unittest.TestCase):
         tx.update_hash()
         self.assertFalse(tx.verify_pow())
 
-    def test_token_creation_with_fee_version(self):
-        """Test TokenCreationTransaction with token_version=2 (FEE)"""
-        from hathorlib.token_creation_tx import TokenVersion
+    def test_token_creation_with_fee_header(self):
+        """Test TokenCreationTransaction with fee header"""
+        from hathorlib.token_creation_tx import TokenCreationTransaction, TokenVersion
 
-        # Using the same structure as test_token_creation_basics but with token_version=2
-        data = bytes.fromhex('00020104000005551d7740fd7d3c0acc50b5677fdd844f1225985aa431e1712af2a2fd'
-                             '8900006a473045022100a445edb5cd6c79a0a7b5ed837582fd65b8d511ee60b64fd076'
-                             'e07bd8f63f75a202202dca24320bffc4c3ca2a07cdfff38f7c839bde70ed49ef634ac6'
-                             '588972836cab2103bfa995d676e3c0ed7b863c74cfef9683fab3163b42b6f21442326a'
-                             '023fc57fba0000264800001976a9146876f9578221fdb678d4e8376503098a9228b132'
-                             '88ac00004e2001001976a914031761ef85a24603203c97e75af355b83209f08f88ac00'
-                             '00000181001976a9149f091256cb98649c7c35df0aad44d7805710691e88ac00000002'
-                             '81001976a914b1d7a5ee505ad4d3b93ea1a5162ba83d5049ec4e88ac0209546f546865'
-                             '4d6f6f6e04f09f9a804034a52aec6cece75e0fc0e30200001a72272f48339fcc5d5ec5'
-                             'deaf197855964b0eb912e8c6eefe00928b6cf600001055641c20b71871ed2c5c7d4096'
-                             'a34f40888d79c25bce74421646e732dc01ff730d')
+        data = bytes.fromhex(
+            '0002010400000672c17c8fcf7277eece0b8cbe3f0efbdf6205e5e8554ccff5ca85ec8e49000069463044022070c5bfcd3b2f177'
+            'c842de1937c8a089bec64ea2d27754056fb7d7882e731aad7022073b6811313a52f74a88cedbbb2d951ddd5c6d2bba97332eea74'
+            '2e020d7717f04210299138e77a8039c31a112941480231cccefc9e627fef5ff4a391e7a2689b319d40000000900001976a914ba6'
+            'a16b0ab2c2bf132e1cfbdc01ef86a8c749a7188ac0000006401001976a914ba6a16b0ab2c2bf132e1cfbdc01ef86a8c749a7188a'
+            'c0000000181001976a914ba6a16b0ab2c2bf132e1cfbdc01ef86a8c749a7188ac0000000281001976a914ba6a16b0ab2c2bf132e'
+            '1cfbdc01ef86a8c749a7188ac0209546f6b656e4e616d6503544b4e4031b96d6968b53e690472ad000000000011010000000001'
+        )
+
         tx = TokenCreationTransaction.create_from_struct(data)
 
         # Verify the token version is FEE (2)
@@ -134,12 +131,23 @@ class HathorCommonsTestCase(unittest.TestCase):
         # Verify basic transaction properties
         self.assertTrue(tx.is_transaction)
         self.assertFalse(tx.is_block)
+        self.assertTrue(tx.has_fees())
+
+        # Verify the fee header contains the expected fee entry
+        fee_header = tx.get_fee_header()
+        self.assertEqual(len(fee_header.fees), 1)
+        self.assertEqual(fee_header.fees[0].token_index, 0)
+        self.assertEqual(fee_header.fees[0].amount, 1)
+
+        self.assertEqual(len(fee_header.get_fees()), 1)
+        self.assertEqual(fee_header.get_fees()[0].amount, 1)
+        self.assertEqual(fee_header.get_fees()[0].token_uid, settings.HATHOR_TOKEN_UID)
 
         # Verify the string representation includes token_version=2
         str_repr = str(tx)
         self.assertIn('token_version=2', str_repr)
-        self.assertIn('token_name=ToTheMoon', str_repr)
-        self.assertIn('token_symbol=🚀', str_repr)
+        self.assertIn('token_name=TokenName', str_repr)
+        self.assertIn('token_symbol=TKN', str_repr)
 
     def test_script_basics(self):
         create_output_script(decode_address('HVZjvL1FJ23kH3buGNuttVRsRKq66WHUVZ'))
